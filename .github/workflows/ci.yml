@@ -43,14 +43,16 @@ jobs:
           name: build
           path: dist
       - name: Create GitHub release
+        shell: bash
         run: |
           export VERSION=`echo dist/pc2-*.zip | sed 's#^dist.*pc2-\(.*\).zip*#\1#'`
           RELEASE_COMMIT=$GITHUB_SHA
-          if [ github.ref == 'refs/heads/master' ]; then
+          if [ "$GITHUB_REF" == 'refs/heads/master' ]; then
              TARGET=builds
           else
              TARGET=nightly-builds
           fi
+          echo "Targeting '$TARGET' for push (github.ref=$GITHUB_REF)"
           http --ignore-stdin POST \
             https://api.github.com/repos/pc2ccs/${TARGET}/releases \
             "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
@@ -103,6 +105,7 @@ jobs:
           name: build
           path: dist
       - name: Push release to website
+        shell: bash
         run: |
           eval $(ssh-agent -s)
           echo "${{ secrets.SSH_PRIVATE_KEY_WEBSITE }}" | tr -d '\r' | ssh-add -
