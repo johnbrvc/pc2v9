@@ -74,11 +74,13 @@ jobs:
                   "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                   'Accept: application/vnd.github.v3+json' \
                   'Content-Type: application/zip' | jq .state
+                  ;;
               *.tar.gz)
                 cat $archive | http --timeout 300 POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$zip \
                   "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                   'Accept: application/vnd.github.v3+json' \
                   'Content-Type: application/gzip' | jq .state
+                  ;;
             esac
             if [ -f $archive.sha256.txt ]; then
                 echo $archive.sha256.txt
