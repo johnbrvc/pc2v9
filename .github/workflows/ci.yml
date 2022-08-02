@@ -47,8 +47,8 @@ jobs:
           else
              TARGET=nightly-builds
           fi
-          VERSION=$VERSION"6"
-          VERSION1=$VERSION1"6"
+          VERSION=$VERSION"7"
+          VERSION1=$VERSION1"7""
           echo DEBUG VERSION="$VERSION" VERSION1="$VERSION1" RELEASE_COMMIT="$RELEASE_COMMIT" TARGET="$TARGET" Key="${{ secrets.RELEASE_TOKEN }}"
           curl --silent --show-error --retry 6 --max-time 300 -X POST \
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
@@ -58,7 +58,7 @@ jobs:
              tee ~/new-release.txt
           RELEASE_ASSET_UPLOAD_URL=$(cat ~/new-release.txt | jq .upload_url | sed -e 's#/assets{.*#/assets#' )
           cd dist
-          echo "Uploading release $VERSION"
+          echo "Uploading release $VERSION ($RELEASE_ASSET_UPLOAD_URL)"
           for archive in *.zip *.gz
           do
             echo $archive...
