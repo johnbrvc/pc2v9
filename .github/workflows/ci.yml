@@ -48,9 +48,9 @@ jobs:
              TARGET=nightly-builds
           fi
           VERSION=$VERSION"1"
-          VERSOIN1=$VERSION1"1"
+          VERSION1=$VERSION1"1"
           echo DEBUG VERSION="$VERSION" VERSION1="$VERSION1" RELEASE_COMMIT="$RELEASE_COMMIT" TARGET="$TARGET" Key="${{ secrets.RELEASE_TOKEN }}"
-          curl -X POST \
+          curl -q -X POST \
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/johnbrvc/${TARGET}/releases \
