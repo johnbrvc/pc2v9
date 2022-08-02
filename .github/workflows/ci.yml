@@ -48,7 +48,7 @@ jobs:
              TARGET=nightly-builds
           fi
           http --ignore-stdin POST \
-            https://api.github.com/repos/pc2ccs/${TARGET}/releases \
+            https://api.github.com/repos/johnbrvc/${TARGET}/releases \
             "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             "Accept: application/vnd.github.v3+json" \
             tag_name=v$VERSION1 \
@@ -56,7 +56,7 @@ jobs:
             name=v$VERSION \
             prerelease:=true | tee ~/new-release.txt
           RELEASE_ID=$(cat ~/new-release.txt | jq .id)
-          RELEASE_ASSET_UPLOAD_URL=https://uploads.github.com/repos/pc2ccs/${TARGET}/releases/${RELEASE_ID}/assets
+          RELEASE_ASSET_UPLOAD_URL=https://uploads.github.com/repos/johnbrvc/${TARGET}/releases/${RELEASE_ID}/assets
           cd dist
           echo "Uploading release $VERSION"
           for archive in *.zip *.gz
