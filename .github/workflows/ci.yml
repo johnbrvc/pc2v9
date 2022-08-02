@@ -69,7 +69,7 @@ jobs:
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: application/zip' \
                     ${RELEASE_ASSET_UPLOAD_URL}\?name=$archive \
-                    | jq .state
+                    | jq .state 
                 ;;
               *.tar.gz)
                   curl --silent --show-error --retry 6 --max-time 300 --data-binary "@$archive" -X POST \
