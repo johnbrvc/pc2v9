@@ -50,6 +50,7 @@ jobs:
           VERSION=$VERSION"7"
           VERSION1=$VERSION1"7"
           echo DEBUG VERSION="$VERSION" VERSION1="$VERSION1" RELEASE_COMMIT="$RELEASE_COMMIT" TARGET="$TARGET" Key="${{ secrets.RELEASE_TOKEN }}"
+          echo GITHUB_API_URL=${GITHUB_API_URL} GITHUB_REPOSITORY_OWNER=${GITHUB_REPOSITORY_OWNER}
           curl --silent --show-error --retry 6 --max-time 300 -X POST \
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
