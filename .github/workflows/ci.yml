@@ -65,7 +65,7 @@ jobs:
             echo $archive...
             case "$archive" in
               *.zip)
-                  curl  --silent --retry 6 --max-time 300 -d "@$archive" -X POST \
+                  curl --retry 6 --max-time 300 --data-binary "@$archive" -X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: application/zip' \
@@ -73,7 +73,7 @@ jobs:
                   	| jq .state
                 ;;
               *.tar.gz)
-                  cat $archive | curl  --silent --retry 6 --max-time 300 -d "@$archive"-X POST \
+                  cat $archive | curl --retry 6 --max-time 300 --data-binary "@$archive"-X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: application/gzip' \
@@ -83,7 +83,7 @@ jobs:
             esac
             if [ -f $archive.sha256.txt ]; then
                 echo $archive.sha256.txt...
-                curl  --silent --retry 6 --max-time 300 -d "@$archive.sha256.txt" -X POST \
+                curl --retry 6 --max-time 300 --data-binary "@$archive.sha256.txt" -X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: text/plain' \
@@ -92,7 +92,7 @@ jobs:
             fi
             if [ -f $archive.sha512.txt ]; then
                 echo $archive.sha512.txt...
-                curl  --silent --retry 6 --max-time 300 -d "@$archive.sha512.txt" -X POST \
+                curl --retry 6 --max-time 300 --data-binary "@$archive.sha512.txt" -X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: text/plain' \
