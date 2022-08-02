@@ -2,8 +2,9 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - master
       - develop
+      - i507_test_push
   pull_request:
 jobs:
   build:
@@ -14,15 +15,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 14.17.x
-          cache: npm
-          cache-dependency-path: projects/WTI-UI/package.json
-
       - name: Build
-        run: ant -noinput -buildfile package.xml
+        run: |
+        	echo Skipping: ant -noinput -buildfile package.xml
 
       - uses: actions/upload-artifact@v3
         with:
@@ -33,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     container: pc2fromecs/jdk8hugo
     needs: build
-    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/i507_test_push'
     steps:
       - uses: actions/checkout@v2
         with:
