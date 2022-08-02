@@ -16,7 +16,7 @@ jobs:
           fetch-depth: 0
 
       - name: Build
-        run: echo Skipping ant -noinput -buildfile package.xml
+        run: ant -noinput -buildfile package.xml
 
       - uses: actions/upload-artifact@v3
         with:

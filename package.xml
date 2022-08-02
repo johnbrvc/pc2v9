@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!-- $Id$ -->
 <!-- $HeadURL$ -->
-<project name="package-pc2v9" default="archives" basedir=".">
+<project name="package-pc2v9" default="archivesSkipTests" basedir=".">
     
 	<!--
     *** import build.xml instead of duplicating properties 
