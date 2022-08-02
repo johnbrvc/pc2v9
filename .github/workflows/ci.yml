@@ -47,8 +47,8 @@ jobs:
           else
              TARGET=nightly-builds
           fi
-          VERSION=$VERSION"2"
-          VERSION1=$VERSION1"2"
+          VERSION=$VERSION"3"
+          VERSION1=$VERSION1"3"
           echo DEBUG VERSION="$VERSION" VERSION1="$VERSION1" RELEASE_COMMIT="$RELEASE_COMMIT" TARGET="$TARGET" Key="${{ secrets.RELEASE_TOKEN }}"
           curl --silent --retry 6 --max-time 300 -X POST \
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
