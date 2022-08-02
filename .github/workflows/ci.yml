@@ -15,15 +15,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 14.17.x
-          cache: npm
-          cache-dependency-path: projects/WTI-UI/package.json
-
       - name: Build
-        run: ant -noinput -buildfile package.xml
+        run: echo Would ant -noinput -buildfile package.xml
 
       - uses: actions/upload-artifact@v3
         with:
