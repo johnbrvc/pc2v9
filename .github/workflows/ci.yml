@@ -63,13 +63,13 @@ jobs:
             echo $archive...
             case "$archive" in
               *.zip)
-                cat $archive | http --timeout 300 POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$zip \
+                cat $archive | http --timeout 300 POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$archive \
                   "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                   'Accept: application/vnd.github.v3+json' \
                   'Content-Type: application/zip' | jq .state
                 ;;
               *.tar.gz)
-                cat $archive | http --timeout 300 POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$zip \
+                cat $archive | http --timeout 300 POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$archive \
                   "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                   'Accept: application/vnd.github.v3+json' \
                   'Content-Type: application/gzip' | jq .state
@@ -77,12 +77,12 @@ jobs:
             esac
             if [ -f $archive.sha256.txt ]; then
                 echo $archive.sha256.txt
-                cat $archive.sha256 | http POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$zip.sha256 \
+                cat $archive.sha256 | http POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$archive.sha256 \
                   "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                   'Accept: application/vnd.github.v3+json' \
                   'Content-Type: text/plain' | jq .state
                 echo $archive.sha512...
-                cat $archive.sha512 | http POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$zip.sha512 \
+                cat $archive.sha512 | http POST ${RELEASE_ASSET_UPLOAD_URL}\?name=$archive.sha512 \
                   "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                   'Accept: application/vnd.github.v3+json' \
                   'Content-Type: text/plain' | jq .state
