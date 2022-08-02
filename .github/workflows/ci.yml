@@ -52,7 +52,7 @@ jobs:
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/johnbrvc/${TARGET}/releases \
-             -d '{"tag_name":"v$VERSION1", "target_commitish":"$RELEASE_COMMIT", "name":"v$VERSION" }' \
+             -d '{"tag_name":"'"v$VERSION1"'", "target_commitish":"master", "name":"'"v$VERSION"'" }' | \
              tee ~/new-release.txt
           RELEASE_ID=$(cat ~/new-release.txt | jq .id)
           RELEASE_ASSET_UPLOAD_URL=https://uploads.github.com/repos/johnbrvc/${TARGET}/releases/${RELEASE_ID}/assets
