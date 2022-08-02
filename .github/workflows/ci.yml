@@ -47,17 +47,16 @@ jobs:
           else
              TARGET=nightly-builds
           fi
-          VERSION=$VERSION"4"
-          VERSION1=$VERSION1"4"
+          VERSION=$VERSION"5"
+          VERSION1=$VERSION1"5"
           echo DEBUG VERSION="$VERSION" VERSION1="$VERSION1" RELEASE_COMMIT="$RELEASE_COMMIT" TARGET="$TARGET" Key="${{ secrets.RELEASE_TOKEN }}"
-          curl --silent --retry 6 --max-time 300 -X POST \
+          curl --silent --show-error --retry 6 --max-time 300 -X POST \
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/johnbrvc/${TARGET}/releases \
              -d '{"tag_name":"'"v$VERSION1"'", "target_commitish":"master", "name":"'"v$VERSION"'" }' | \
              tee ~/new-release.txt
-          RELEASE_ID=$(cat ~/new-release.txt | jq .id)
-          RELEASE_ASSET_UPLOAD_URL=https://uploads.github.com/repos/johnbrvc/${TARGET}/releases/${RELEASE_ID}/assets
+          RELEASE_ASSET_UPLOAD_URL=$(cat ~/new-release.txt | jq .assets_url)
           cd dist
           echo "Uploading release $VERSION"
           for archive in *.zip *.gz
@@ -65,7 +64,7 @@ jobs:
             echo $archive...
             case "$archive" in
               *.zip)
-                  curl --silent --retry 6 --max-time 300 --data-binary "@$archive" -X POST \
+                  curl --silent --show-error --retry 6 --max-time 300 --data-binary "@$archive" -X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: application/zip' \
@@ -73,7 +72,7 @@ jobs:
                     | jq .state
                 ;;
               *.tar.gz)
-                  curl --silent --retry 6 --max-time 300 --data-binary "@$archive" -X POST \
+                  curl --silent --show-error --retry 6 --max-time 300 --data-binary "@$archive" -X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: application/gzip' \
@@ -83,7 +82,7 @@ jobs:
             esac
             if [ -f $archive.sha256.txt ]; then
                 echo $archive.sha256.txt...
-                curl --silent --retry 6 --max-time 300 --data-binary "@$archive.sha256.txt" -X POST \
+                curl --silent --show-error --retry 6 --max-time 300 --data-binary "@$archive.sha256.txt" -X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: text/plain' \
@@ -92,7 +91,7 @@ jobs:
             fi
             if [ -f $archive.sha512.txt ]; then
                 echo $archive.sha512.txt...
-                curl --silent --retry 6 --max-time 300 --data-binary "@$archive.sha512.txt" -X POST \
+                curl --silent --show-error --retry 6 --max-time 300 --data-binary "@$archive.sha512.txt" -X POST \
                     -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
                     -H 'Accept: application/vnd.github.v3+json' \
                     -H 'Content-Type: text/plain' \
