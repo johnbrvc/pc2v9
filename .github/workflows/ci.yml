@@ -56,7 +56,7 @@ jobs:
             https://api.github.com/repos/johnbrvc/${TARGET}/releases \
              -d '{"tag_name":"'"v$VERSION1"'", "target_commitish":"master", "name":"'"v$VERSION"'" }' | \
              tee ~/new-release.txt
-          RELEASE_ASSET_UPLOAD_URL=$(cat ~/new-release.txt | jq .assets_url)
+          RELEASE_ASSET_UPLOAD_URL=$(cat ~/new-release.txt | jq .upload_url | sed -e 's#/assets{.*#/assets#' )
           cd dist
           echo "Uploading release $VERSION"
           for archive in *.zip *.gz
