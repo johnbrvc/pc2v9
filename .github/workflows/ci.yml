@@ -57,7 +57,7 @@ jobs:
              -d '{"tag_name":"'"v$VERSION1"'", "target_commitish":"master", "name":"'"v$VERSION"'" }' | \
              tee ~/new-release.txt
           RELEASE_ID=$(cat ~/new-release.txt | jq .id)
-          RELEASE_ASSET_UPLOAD_URL=https://uploads.github.com/repos/johnbrvc/${TARGET}/releases/assets/${RELEASE_ID}
+          RELEASE_ASSET_UPLOAD_URL=https://uploads.github.com/repos/johnbrvc/${TARGET}/releases/${RELEASE_ID}/assets
           cd dist
           echo "Uploading release $VERSION"
           for archive in *.zip *.gz
