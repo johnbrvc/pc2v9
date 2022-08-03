@@ -40,7 +40,7 @@ jobs:
         shell: bash
         run: |
           eval $(ssh-agent -s)
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+          echo "${{SSH_PRIVATE_KEY_GIT}}" | tr -d '\r' | ssh-add -
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
