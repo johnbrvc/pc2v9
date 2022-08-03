@@ -60,6 +60,7 @@ jobs:
           # a commit is needed to associate to a release
           git commit --allow-empty -m "Add build $VERSION"
           git push
+          cd ~
           RELEASE_COMMIT=$(git rev-parse HEAD)
           VERSION=$VERSION"8"
           VERSION1=$VERSION1"8"
