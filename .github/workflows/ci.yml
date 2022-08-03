@@ -72,7 +72,7 @@ jobs:
              tee ~/new-release.txt
           RELEASE_ASSET_UPLOAD_URL=$(cat ~/new-release.txt | jq .upload_url | sed -e 's/"//g' -e 's#/assets{.*#/assets#' )
           cd dist
-          echo "Uploading release $VERSION $RELEASE_ASSET_UPLOAD_URL"
+          echo "Uploading release $VERSION  $RELEASE_ASSET_UPLOAD_URL"
           for archive in *.zip *.gz
           do
             echo $archive...
