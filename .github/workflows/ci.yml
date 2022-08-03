@@ -47,6 +47,13 @@ jobs:
           else
              TARGET=nightly-builds
           fi
+          mkdir ~/builds
+          cd ~/builds
+          git clone git@github.com:${GITHUB_REPOSITORY_OWNER}/${TARGET}.git .
+          # a commit is needed to associate to a release
+          git commit --allow-empty -m "Add build $VERSION"
+          git push
+          RELEASE_COMMIT=$(git rev-parse HEAD)
           VERSION=$VERSION"8"
           VERSION1=$VERSION1"8"
           echo DEBUG VERSION="$VERSION" VERSION1="$VERSION1" RELEASE_COMMIT="$RELEASE_COMMIT" TARGET="$TARGET" Key="${{ secrets.RELEASE_TOKEN }}"
@@ -55,7 +62,7 @@ jobs:
             -H "Authorization: token ${{ secrets.RELEASE_TOKEN }}" \
             -H "Accept: application/vnd.github.v3+json" \
             ${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY_OWNER}/${TARGET}/releases \
-             -d '{"tag_name":"'"v$VERSION1"'", "name":"'"v$VERSION"'" }' | \
+             -d '{"tag_name":"'"v$VERSION1"'", "name":"'"v$VERSION"'", "target_commitish":"'"$RELEASE_COMMIT"'" }' | \
              tee ~/new-release.txt
           RELEASE_ASSET_UPLOAD_URL=$(cat ~/new-release.txt | jq .upload_url | sed -e 's/"//g' -e 's#/assets{.*#/assets#' )
           cd dist
