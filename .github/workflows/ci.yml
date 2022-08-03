@@ -60,8 +60,8 @@ jobs:
           # a commit is needed to associate to a release
           git commit --allow-empty -m "Add build $VERSION"
           git push
-          cd ~
           RELEASE_COMMIT=$(git rev-parse HEAD)
+          cd ~
           VERSION=$VERSION"8"
           VERSION1=$VERSION1"8"
           echo DEBUG VERSION="$VERSION" VERSION1="$VERSION1" RELEASE_COMMIT="$RELEASE_COMMIT" TARGET="$TARGET" Key="${{ secrets.RELEASE_TOKEN }}"
