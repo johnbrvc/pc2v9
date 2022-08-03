@@ -43,7 +43,7 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY_GIT }}" | tr -d '\r' | ssh-add -
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts
+          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts
           git config --global user.email "johnbrvc@gmail.com"
           git config --global user.name "john"
           export VERSION=`echo dist/pc2-*.zip | sed 's#^dist.*pc2-\(.*\).zip*#\1#'`
