@@ -1812,7 +1812,11 @@ public class Executable extends Plugin implements IExecutable {
             }
 
             log.log(Log.DEBUG, "before substitution: " + cmdline);
-            cmdline = substituteAllStrings(run, cmdline);
+            if(problem.isReadInputDataFromSTDIN()) {
+                cmdline = substituteAllStrings(run, cmdline, dataSetNumber+1);
+            } else {
+                cmdline = substituteAllStrings(run, cmdline);
+            }
             log.log(Log.DEBUG, "after  substitution: " + cmdline);
 
             /**
@@ -2397,6 +2401,10 @@ public class Executable extends Plugin implements IExecutable {
         return replaceString(origString, beforeString, afterString);
     }
 
+    public String substituteAllStrings(Run inRun, String origString) {
+        return(substituteAllStrings(inRun, origString, 1));
+    }
+    
     /**
      * return string with all field variables filled with values.
      * 
@@ -2417,13 +2425,15 @@ public class Executable extends Plugin implements IExecutable {
      *              {:pc2home}
      * </pre>
      * 
+     * @param dataSetNumber
+     *            which set of judge data to use (1 in the case of only 1 file)
      * @param inRun
      *            submitted by team
      * @param origString
      *            - original string to be substituted.
      * @return string with values
      */
-    public String substituteAllStrings(Run inRun, String origString) {
+    public String substituteAllStrings(Run inRun, String origString, int dataSetNumber) {
         String newString = "";
         String nullArgument = "-"; /* this needs to change */
 
@@ -2501,13 +2511,15 @@ public class Executable extends Plugin implements IExecutable {
             }
 
             if (problem != null) {
-                if (problem.getDataFileName() != null && !problem.getDataFileName().equals("")) {
-                    newString = replaceString(newString, "{:infile}", problem.getDataFileName());
+                String fileName = problem.getDataFileName(dataSetNumber);
+                if (fileName != null && !fileName.equals("")) {
+                    newString = replaceString(newString, "{:infile}", fileName);
                 } else {
                     newString = replaceString(newString, "{:infile}", nullArgument);
                 }
-                if (problem.getAnswerFileName() != null && !problem.getAnswerFileName().equals("")) {
-                    newString = replaceString(newString, "{:ansfile}", problem.getAnswerFileName());
+                fileName = problem.getAnswerFileName(dataSetNumber);
+                if (fileName != null && !fileName.equals("")) {
+                    newString = replaceString(newString, "{:ansfile}", fileName);
                 } else {
                     newString = replaceString(newString, "{:ansfile}", nullArgument);
                 }
