@@ -2901,7 +2901,7 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
             
             for (int idx = 0; idx < inputFileNames.length; idx++) {
 
-                problem.addTestCaseFilenames(inputFileNames[idx], answerFileNames[idx]);
+                problem.addTestCaseFilenames("secret" + File.separator + inputFileNames[idx], "secret" + File.separator + answerFileNames[idx]);
 
                 String dataFileName = dataFileBaseDirectory + File.separator + inputFileNames[idx];
                 String answerFileName = dataFileName.replaceAll(".in$", ".ans");
@@ -2969,7 +2969,7 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
 
             for (int idx = 0; idx < inputFileNames.length; idx++) {
 
-                problem.addTestCaseFilenames(inputFileNames[idx], answerFileNames[idx]);
+                problem.addTestCaseFilenames("sample" + File.separator + inputFileNames[idx], "sample" + File.separator + answerFileNames[idx]);
 
                 String answerShortFileName = inputFileNames[idx].replaceAll(".in$", ".ans");
 

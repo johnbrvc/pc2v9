@@ -83,7 +83,7 @@ public final class Utilities {
      * @see #getSecretDataPath(String, Problem)
      * @see #getSecretDataPath(String, String)
      */
-    public static final String SECRET_DATA_DIR = "data" + File.separator + "secret";
+    public static final String SECRET_DATA_DIR = "data"; // + File.separator + "secret";
 
     private static SimpleDateFormat format = new SimpleDateFormat(DATE_TIME_FORMAT_STRING);
 
@@ -1101,7 +1101,7 @@ public final class Utilities {
                 judgeDataFilesPath = Utilities.getSecretDataPath(judgeDataFilesPath, problem) + File.separator;
                 File judgeDir = new File(judgeDataFilesPath);
                 if (!judgeDir.isDirectory()) {
-                    judgeDataFilesPath = judgeDataFilesPath.replaceFirst(".data.secret", "");
+                    judgeDataFilesPath = judgeDataFilesPath.replaceFirst(".data", "");
                 }
             }
 
@@ -1114,7 +1114,20 @@ public final class Utilities {
 
                     // if we have a judgeDataFilesPath use it, otherwise continue with the normal handling
                     if (!"".equals(judgeDataFilesPath)) {
-                        String filename = judgeDataFilesPath + serializedFile.getName();
+                        // Need last 2 components of file name.  eg. sample/p001.in or secret/p001.in
+                        String datafile = serializedFile.getAbsolutePath();
+                        int idx = datafile.lastIndexOf(File.separator);
+                        // If a file separator, then dig further looking for it's containing folder,
+                        // otherwise, just take the basename (which is what it is).
+                        if(idx > 0) {
+                            idx = datafile.lastIndexOf(File.separator, idx-1);
+                            // See if there's another separator, if so, we want everything after it
+                            // otherwise, we'll take what's there, eg: if string was "sample/p001.in", we'll use: sample/p001.in"
+                            if(idx >= 0) {
+                                datafile = datafile.substring(idx+1);
+                            }
+                        }
+                        String filename = judgeDataFilesPath + datafile;
                         output.add(filename);
                     } else if (executableDir == null) {
                         output.add(serializedFile.getName());
@@ -1330,7 +1343,7 @@ public final class Utilities {
 
                     if (!isDirThere(dataPath)) {
                         // change to shortName
-                        dataPath = dataPath.replaceFirst(".data.secret", "");
+                        dataPath = dataPath.replaceFirst(".data", "");
                     }
                     if (!isDirThere(dataPath)) {
                         messages.add(problemTitle + "\tMissing data directory, expected at: " + dataPath + " or (" + dataPath + File.separator + "data" + File.separator + "secret)");
