@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2019 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.ui;
 
 import java.awt.BorderLayout;
@@ -1891,6 +1891,59 @@ public class TestResultsPane extends JPanePlugin implements TableModelListener {
         } else {
             if (debug) {
                 System.out.println("...all test cases are already in the results table.");
+            }
+        }
+    }
+
+    /**
+     * Clears the given JTable with empty test cases
+     * 
+     * @param aResultsTable - a JTable expected to already contain one row for each test case which has been executed
+     */
+    public void resetResultsTable() {
+        
+        if(resultsTable != null) {
+            //get the table model which defines the current table contents
+            TestCaseResultsTableModel tableModel = (TestCaseResultsTableModel) resultsTable.getModel();
+            
+            //get how many total test cases were configured into the problem
+            int totalTestCaseCount = currentProblem.getNumberTestCases();
+            
+            //get how many test case rows are already in the table model
+            int testCasesInTableModel = tableModel.getRowCount();
+            
+            //yes, there are missing cases; add them to the table
+            for (int testCaseNum=1; testCaseNum<=totalTestCaseCount; testCaseNum++) {
+                //add the current unexecuted test case to the table model
+                            
+                //build the variable portions of the row data 
+                String viewJudgeAnswerFile = "";
+                if (currentProblem.getAnswerFileName(testCaseNum)!=null && currentProblem.getAnswerFileName(testCaseNum).length()>0) {  
+                    viewJudgeAnswerFile = "View";
+                }
+                String viewJudgeDataFile = "";
+                if (currentProblem.getDataFileName(testCaseNum)!=null && currentProblem.getDataFileName(testCaseNum).length()>0) {
+                    viewJudgeDataFile = "View";
+                }
+    //                "Awaiting Result",                          //result string
+    //                "--  ",                                     //execution time (of which there is none since the test case wasn't executed)
+    //                "",                                         //link to team output (none since it wasn't executed)
+    //                "",                                         //link to team compare-with-judge label (disabled since there's no team output)
+    //                viewJudgeAnswerFile,                        //link to judge's output (answer file) if any
+    //                viewJudgeDataFile,                          //link to judge's data if any
+    //                "",                                         //link to validator stdout (none)
+    //                ""                                          //link to validator stderr (none)
+                TestResultsRowData rowData = new TestResultsRowData("Awaiting Result", "--  ","", "",viewJudgeAnswerFile,viewJudgeDataFile, "", "");
+                // if row exists, we have replace it
+                if(testCaseNum <= testCasesInTableModel) {
+                    tableModel.setRow(testCaseNum-1,  new Boolean(false), new String(Integer.toString(testCaseNum)), rowData);
+                } else {
+                    // add new row
+                    tableModel.addRow(
+                            new Boolean(false),                         //selection checkbox
+                            new String(Integer.toString(testCaseNum)),  //test case number
+                            rowData);
+                }
             }
         }
     }

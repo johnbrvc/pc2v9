@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2022 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.ui;
 
 import java.awt.BorderLayout;
@@ -864,7 +864,12 @@ public class SelectJudgementPaneNew extends JPanePlugin {
 
         executable = new Executable(getContest(), getController(), run, runFiles, executeFrame);
 
-        // getManualRunResultsPanel().clear();
+        // only if do not show output is not checked, clear the results pane
+        if (!getContest().getProblem(run.getProblemId()).isHideOutputWindow()) {
+            getTestResultsFrame().clearData();
+        }
+        
+       // getManualRunResultsPanel().clear();
         setEnabledButtonStatus(false);
         executable.execute();
         
@@ -906,6 +911,7 @@ public class SelectJudgementPaneNew extends JPanePlugin {
         sendValidatorStderrFileNames();
         // only if do not show output is not checked
         if (!getContest().getProblem(run.getProblemId()).isHideOutputWindow()) {
+
             // the run gets modified in Executable to have testCases, so resend the data
             Problem problem = getContest().getProblem(run.getProblemId());
             getTestResultsFrame().setData(run, runFiles, problem, getProblemDataFiles());
