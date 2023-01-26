@@ -1115,6 +1115,10 @@ public final class Utilities {
                     // if we have a judgeDataFilesPath use it, otherwise continue with the normal handling
                     if (!"".equals(judgeDataFilesPath)) {
                         // Need last 2 components of file name.  eg. sample/p001.in or secret/p001.in
+                        // datafile may be one of (the first one is what it SHOULD be):
+                        //   /home/ubuntu/pc2/config/hello/data/sample/p001.in in which case we want sample/p001.in
+                        //   p001.in in which case we'll use p001.in
+                        //   sample/p001.in in which ase we'll use sample/p001.in
                         String datafile = serializedFile.getAbsolutePath();
                         int idx = datafile.lastIndexOf(File.separator);
                         // If a file separator, then dig further looking for it's containing folder,
