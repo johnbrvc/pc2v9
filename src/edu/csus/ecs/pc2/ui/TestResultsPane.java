@@ -1911,7 +1911,7 @@ public class TestResultsPane extends JPanePlugin implements TableModelListener {
             //get how many test case rows are already in the table model
             int testCasesInTableModel = tableModel.getRowCount();
             
-            for(int row = 0; row < testCasesInTableModel; row++) {
+            for(int row = testCasesInTableModel-1; row >= 0; row--) {
                 tableModel.removeRow(row);
             }
             
