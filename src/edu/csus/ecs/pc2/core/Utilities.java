@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2022 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.core;
 
 import java.io.BufferedReader;
@@ -83,7 +83,7 @@ public final class Utilities {
      * @see #getSecretDataPath(String, Problem)
      * @see #getSecretDataPath(String, String)
      */
-    public static final String SECRET_DATA_DIR = "data"; // + File.separator + "secret";
+    public static final String CCS_DATA_DIR = "data";
 
     private static SimpleDateFormat format = new SimpleDateFormat(DATE_TIME_FORMAT_STRING);
 
@@ -155,7 +155,7 @@ public final class Utilities {
      * Return CCS path for input data and answer file names.
      */
     public static String getSecretDataPath(String baseCDPPath, String problemShortName) {
-        return baseCDPPath + File.separator + problemShortName + File.separator + SECRET_DATA_DIR;
+        return baseCDPPath + File.separator + problemShortName + File.separator + CCS_DATA_DIR;
     }
 
     /**
@@ -979,7 +979,7 @@ public final class Utilities {
                 }
             }
 
-            String secretPathPattern = File.separator + SECRET_DATA_DIR + File.separator;
+            String secretPathPattern = File.separator + CCS_DATA_DIR + File.separator;
             String fullPathName = serializedFile.getAbsolutePath();
 
             secretPathPattern = secretPathPattern.replace('\\', '.');
@@ -1279,14 +1279,14 @@ public final class Utilities {
     /**
      * Find base data path for problems.
      * 
-     * If {@value #SECRET_DATA_DIR} in filePath will strop off anything including and after {@value #SECRET_DATA_DIR}.
+     * If {@value #CCS_DATA_DIR} in filePath will strip off anything including and after {@value #CCS_DATA_DIR}.
      * 
      * @param filePath
-     * @return directory name up to {@value #SECRET_DATA_DIR}
+     * @return directory name up to {@value #CCS_DATA_DIR}
      */
     public static String findDataBasePath(String filePath) {
 
-        int idx = filePath.indexOf(SECRET_DATA_DIR);
+        int idx = filePath.indexOf(CCS_DATA_DIR);
         if (idx != -1) {
             return filePath.substring(0, idx);
         }
