@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2019 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2022 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.core.execute;
 
 import java.io.BufferedInputStream;
@@ -11,6 +11,8 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Hashtable;
@@ -40,6 +42,7 @@ import edu.csus.ecs.pc2.core.model.Judgement;
 import edu.csus.ecs.pc2.core.model.JudgementRecord;
 import edu.csus.ecs.pc2.core.model.Language;
 import edu.csus.ecs.pc2.core.model.Problem;
+import edu.csus.ecs.pc2.core.model.Problem.SandboxType;
 import edu.csus.ecs.pc2.core.model.ProblemDataFiles;
 import edu.csus.ecs.pc2.core.model.Run;
 import edu.csus.ecs.pc2.core.model.RunFiles;
@@ -48,6 +51,7 @@ import edu.csus.ecs.pc2.core.model.SerializedFile;
 import edu.csus.ecs.pc2.ui.IFileViewer;
 import edu.csus.ecs.pc2.ui.MultipleFileViewer;
 import edu.csus.ecs.pc2.ui.NullViewer;
+import edu.csus.ecs.pc2.util.OSCompatibilityUtilities;
 import edu.csus.ecs.pc2.validator.clicsValidator.ClicsValidator;
 import edu.csus.ecs.pc2.validator.clicsValidator.ClicsValidatorSettings;
 import edu.csus.ecs.pc2.validator.pc2Validator.PC2ValidatorSettings;
@@ -156,7 +160,31 @@ public class Executable extends Plugin implements IExecutable {
     private static final String EXIT_CODE_FILENAME = "EXITCODE.TXT";
 
     private static final long NANOSECS_PER_MILLISEC = 1_000_000;
-
+    
+    /**
+     * Sandbox constants
+     */
+    public static final long SANDBOX_EXTRA_KILLTIME_MS = 1000;
+    
+    /**
+     * Return codes from sandbox
+     */
+    public static final int FAIL_RETCODE_BASE = 128 + 64;
+    public static final int FAIL_EXIT_CODE = FAIL_RETCODE_BASE + 43;
+    public static final int FAIL_NO_ARGS_EXIT_CODE = FAIL_RETCODE_BASE + 44;
+    public static final int FAIL_INSUFFICIENT_ARGS_EXIT_CODE = FAIL_RETCODE_BASE + 45;
+    public static final int FAIL_INVALID_CGROUP_INSTALLATION = FAIL_RETCODE_BASE + 46;
+    public static final int FAIL_MISSING_CGROUP_CONTROLLERS_FILE = FAIL_RETCODE_BASE + 47;
+    public static final int FAIL_MISSING_CGROUP_SUBTREE_CONTROL_FILE = FAIL_RETCODE_BASE + 48;
+    public static final int FAIL_CPU_CONTROLLER_NOT_ENABLED = FAIL_RETCODE_BASE + 49;
+    public static final int FAIL_MEMORY_CONTROLLER_NOT_ENABLED = FAIL_RETCODE_BASE + 50;
+    public static final int FAIL_MEMORY_LIMIT_EXCEEDED = FAIL_RETCODE_BASE + 51;
+    public static final int FAIL_TIME_LIMIT_EXCEEDED = FAIL_RETCODE_BASE + 52;
+    public static final int FAIL_WALL_TIME_LIMIT_EXCEEDED = FAIL_RETCODE_BASE + 53;
+    
+    public static final int FAIL_RETCODE_FIRST = FAIL_EXIT_CODE;
+    public static final int FAIL_RECODE_LAST = FAIL_WALL_TIME_LIMIT_EXCEEDED;
+    
     /**
      * Files submitted with the Run.
      */
@@ -213,6 +241,12 @@ public class Executable extends Plugin implements IExecutable {
     private String packageName = "";
 
     private String packagePath = "";
+    
+    //setting this to True will override the prohibition on invoking a Sandbox when running on Windows.
+    // Note that THIS IS FOR DEBUGGING PURPOSES; it does NOT imply any support for Windows sandboxing.
+    //TODO: change this variable to FALSE before generating a production distribution.
+    private boolean debugAllowSandboxInvocationOnWindows = true;
+
 
     public Executable(IInternalContest inContest, IInternalController inController, Run run, RunFiles runFiles, IExecuteTimerFrame msgFrame) {
         super();
@@ -1679,6 +1713,8 @@ public class Executable extends Plugin implements IExecutable {
         
         boolean proceedToValidation = false;
         String inputDataFileName = null;
+        boolean usingSandbox = false ;
+        boolean bSandboxSystemError = false;
 
         // a one-based test data set number
         int testSetNumber = dataSetNumber + 1;
@@ -1819,30 +1855,52 @@ public class Executable extends Plugin implements IExecutable {
 
             }
 
-            log.log(Log.DEBUG, "before substitution: " + cmdline);
-            cmdline = substituteAllStrings(run, cmdline, dataSetNumber+1);
-            log.log(Log.DEBUG, "after  substitution: " + cmdline);
+            //determine whether the Problem is configured to use a sandbox 
+            try {
+                usingSandbox = isUsingSandbox();
+            } catch (Exception e) {
+                //an exception means there is something wrong about sandbox usage (e.g. not allowed on this platform)
+                log.severe("Exception during sandbox usage check: " + e.getMessage());
+                stderrlog.close();
+                stdoutlog.close();
+                executionData.setExecuteSucess(false);
+                executionData.setExecutionException(e);
+                return false;
+            }
+            
+            if (usingSandbox) {
+                //insert the command for invoking the sandbox at the front of the command line
+                cmdline = problem.getSandboxCmdLine() + " " + cmdline ;
+            }
+            
+            log.log(Log.DEBUG, "cmdline before substitution: " + cmdline);
+            cmdline = substituteAllStrings(run, cmdline);
+            log.log(Log.DEBUG, "cmdline after substitution: " + cmdline);
 
             /**
-             * Insure that the first command in the command line can be executed by prepending the execute directory name.
+             * Insure that the first command in the command line can be executed by prepending the execute directory name
+             *   (but be sure to retain any command line arguments).
              */
 
-            int i; // location of first space in command line.
-            String actFilename = new String(cmdline);
-
-            i = actFilename.trim().indexOf(" ");
+            String trimmedCmd = cmdline.trim();
+            String cmdWord; //the first "word" in the command line
+            
+            //find the location of the first space in the trimmed command line (if any)
+            int i = trimmedCmd.indexOf(" ");
             if (i > -1) {
-                actFilename = prefixExecuteDirname(actFilename.trim().substring(0, i));
+                //there was a space; build the command word with the full path to the execute directory prefixed
+                cmdWord = prefixExecuteDirname(trimmedCmd.substring(0, i));
             } else {
-                actFilename = prefixExecuteDirname(actFilename.trim());
+                //there was no space; take the whole command line as the command word
+                cmdWord = prefixExecuteDirname(trimmedCmd);
             }
 
-            File f = new File(actFilename);
+            File f = new File(cmdWord);
             if (f.exists()) {
                 /**
-                 * If the first word is a existing file, use the full path
+                 * If the first word is an existing file, use the full path to the file (adding any following arguments)
                  */
-                cmdline = f.getCanonicalPath();
+                cmdline = f.getCanonicalPath() + trimmedCmd.substring(i);
             }
 
             boolean autoStop = false;
@@ -1853,6 +1911,14 @@ public class Executable extends Plugin implements IExecutable {
                 autoStop = true;
             }
 
+            //if a sandbox is being used, disable both the ExecutionTimer's actionPerformed() ability to stop the process
+            // as well as the TimerTask's ability to stop the process
+//            if (usingSandbox) {
+//                //don't allow either the GUI timer or the TimerTask to stop the team code process; 
+//                // the sandbox will be responsible for this.
+//                autoStop = false;
+//            }
+            
             //start the program executing.  Note that runProgram() sets the "startTimeNanos" timestamp 
             /// immediately prior to actually "execing" the process.
             log.info("starting team program...");
@@ -1877,6 +1943,7 @@ public class Executable extends Plugin implements IExecutable {
             log.info("got new TLE-Timer: " + timeLimitKillTimer.toString());
             
             //create a TimerTask to kill the process if it exceeds the problem time limit
+            // (note that this task only gets scheduled (see below) if we are NOT using a sandbox)
             
             killedByTimer = false ;
             
@@ -1905,7 +1972,13 @@ public class Executable extends Plugin implements IExecutable {
             //set the TLE kill task delay to the number of milliseconds allowed by the problem
             long delay = (long) (problem.getTimeOutInSeconds() * 1000) ;
             
+            if(usingSandbox) {
+                log.info ("adding " + SANDBOX_EXTRA_KILLTIME_MS + " msec delay to TLE-Timer for sandbox");
+                delay += SANDBOX_EXTRA_KILLTIME_MS;
+            }
+            
             //schedule the TLE kill task with the Timer -- but only for judged runs (i.e., non-team runs)
+            // and only when we're not using a sandbox (which will handle time limit within the sandbox)
             if (autoStop) {
                 log.info ("scheduling kill task with TLE-Timer with " + delay + " msec delay");
                 timeLimitKillTimer.schedule(task, delay);
@@ -1999,11 +2072,12 @@ public class Executable extends Plugin implements IExecutable {
             
             log.info("team process returned exit code " + exitCode);
             
+            //TODO: comment-out this debug statement
+            //System.out.println ("team process returned exit code " + exitCode);
+            
             //get rid of the TLE timer (whether the TLE-kill task has been fired or not)
             log.info("cancelling TLE-Timer (note: this does not stop any already-running TLE-Timer tasks...)");
             timeLimitKillTimer.cancel();
-            
-//            System.out.println("  Process run time was " + getExecutionTimeInMSecs() + "ms");
 
             //update executionData info
             executionData.setExecuteExitValue(exitCode);
@@ -2011,6 +2085,37 @@ public class Executable extends Plugin implements IExecutable {
             
             boolean runTimeLimitWasExceeded = getExecutionTimeInMSecs() > problem.getTimeOutInSeconds()*1000 ;
             executionData.setRunTimeLimitExceeded(runTimeLimitWasExceeded);
+            
+            /**
+             * Check sandbox script return codes
+             */
+            if(usingSandbox) {
+                if(exitCode >= FAIL_RETCODE_FIRST && exitCode <= FAIL_RECODE_LAST) {
+                    log.info("Sandbox returned normalized error " + (exitCode - FAIL_RETCODE_BASE));
+                    switch(exitCode) {
+                    case FAIL_EXIT_CODE:
+                    case FAIL_NO_ARGS_EXIT_CODE:
+                    case FAIL_INSUFFICIENT_ARGS_EXIT_CODE:
+                    case FAIL_INVALID_CGROUP_INSTALLATION:
+                    case FAIL_MISSING_CGROUP_CONTROLLERS_FILE:
+                    case FAIL_MISSING_CGROUP_SUBTREE_CONTROL_FILE:
+                    case FAIL_CPU_CONTROLLER_NOT_ENABLED:
+                    case FAIL_MEMORY_CONTROLLER_NOT_ENABLED:
+                        // These are all "system errors"
+                        bSandboxSystemError = true;
+                        break;
+                    case FAIL_MEMORY_LIMIT_EXCEEDED:
+                        executionData.setMemoryLimitExceeded(true);
+                        break;
+                    case FAIL_TIME_LIMIT_EXCEEDED:
+                        executionData.setRunTimeLimitExceeded(true);
+                        break;
+                    case FAIL_WALL_TIME_LIMIT_EXCEEDED:
+                        executionData.setRunTimeLimitExceeded(true);
+                        break;
+                    }
+                }
+            }
  
             if (executionData.isRunTimeLimitExceeded()) {
                 log.info("Run exceeded problem time limit of " + problem.getTimeOutInSeconds() + " secs: actual run time = " + executionData.getExecuteTimeMS() + " msec;  Run = " + run);
@@ -2027,8 +2132,9 @@ public class Executable extends Plugin implements IExecutable {
             log.info("calling Process.destroy() on process " + getProcessID(process) );
             process.destroy();
 
-            // if the process generated a Runtime Error and did NOT exceed time limit, add error msg to team output
-            if (!executionData.isRunTimeLimitExceeded() && !terminatedByOperator && exitCode != 0) {
+            // if the process generated a Runtime Error and did NOT exceed time/memory limit, and not sandbox error, add error msg to team output
+            if (!executionData.isRunTimeLimitExceeded() && !executionData.isMemoryLimitExceeded() &&
+                !terminatedByOperator && !bSandboxSystemError && exitCode != 0) {
                 String msg = "Note: program exited with non-zero exit code '" + exitCode + "'" + NL;
                 stdoutlog.write(msg.getBytes());
             }
@@ -2109,9 +2215,33 @@ public class Executable extends Plugin implements IExecutable {
             executionData.setValidationResults(judgementString);
             executionData.setValidationSuccess(true);
             proceedToValidation = false;
+        } else if(executionData.isMemoryLimitExceeded()) {
+            Judgement judgement = JudgementUtilites.findJudgementByAcronym(contest, "MLE");
+            String judgementString = "No - Memory Limit Exceeded"; // default
+            if (judgement != null) {
+                judgementString = judgement.getDisplayName();
+            }
+
+            executionData.setValidationResults(judgementString);
+            executionData.setValidationSuccess(true);
+            proceedToValidation = false;
+            
+        } else if(bSandboxSystemError) {
+            Judgement judgement = JudgementUtilites.findJudgementByAcronym(contest, "OCS");
+            String judgementString = "No - contact staff"; // default
+            if (judgement != null) {
+                judgementString = judgement.getDisplayName();
+            }
+
+            executionData.setValidationResults(judgementString);
+            executionData.setValidationSuccess(true);
+            proceedToValidation = false;
         }
 
-        if (executionData.getExecuteExitValue() != 0  &&  !killedByTimer) {
+        // if return code wasn't 0, it means something went wrong.  We only override the result
+        // if we were not killed by the execute timer and we didn't override the judgement above by
+        // TLE/MLE/OCS
+        if (executionData.getExecuteExitValue() != 0  &&  !killedByTimer && proceedToValidation) {
             
             Judgement judgement = JudgementUtilites.findJudgementByAcronym(contest, "RTE");
             String judgementString = "No - Run-time Error"; // default
@@ -2125,6 +2255,116 @@ public class Executable extends Plugin implements IExecutable {
         }
         
         return proceedToValidation;
+    }
+
+    /**
+     * Returns true if the current Problem is configured to use a sandbox, sandbox usage is supported on the current platform, 
+     * and the current client is not a Team; false otherwise.
+     * If the returned value is True, the sandbox for the problem will have been copied into the Execute directory.
+     * 
+     *TODO: this is a query method with a side-effect (copying the sandbox into the execute directory); that's not good style...
+     *TODO:  Need to refactor this into two steps:  a query (without side effects) asking whether the problem is supposed to use
+     *TODO:    a sandbox, and then if that returns True, a call to a separate method which installs the sandbox.  This is tricky
+     *TODO:    because we want to get the proper exception back to the caller...
+     * 
+     * @return true if the Problem is to use a sandbox; false if not.  If True is returned, the sandbox will have been copied into 
+     *              the Execute directory.
+     * 
+     * @throws Exception if there is a sandbox configuration issue, such as 
+     *          we're running on an OS platform where sandbox isn't supported, or
+     *          the specified sandbox can't be loaded into the execute directory.
+     */
+    private boolean isUsingSandbox() throws Exception {
+        
+        log.info("Checking problem sandbox usage...");
+        
+        if (problem.isUsingSandbox() && !isTeam()) {
+            
+            //check the OS to be sure we have a sandbox supported
+            if (OSCompatibilityUtilities.isRunningOnWindows() && !debugAllowSandboxInvocationOnWindows) {
+                
+                log.severe("Attempt to execute a problem configured with a sandbox on a Windows system: not supported");
+                throw new Exception ("Sandbox not supported on Windows OS");
+                
+            } else {
+                
+                //OS supported (non-Windows values of osName could be "Linux", "SunOS", "FreeBSD", and "Mac OS X", all of which should work)
+                //check if we're supposed to use the PC2 internal sandbox
+                SandboxType sbType = problem.getSandboxType();
+                if (sbType == SandboxType.PC2_INTERNAL_SANDBOX) {
+                    
+                    log.info("Copying PC2 sandbox into Execute directory");
+                    try {
+                        //copy the PC2 internal sandbox into the execution directory
+                        copyPC2Sandbox();
+                    } catch (Exception e) {
+                        log.severe("Unable to copy PC2 Internal Sandbox to execute directory; cannot execute submission");
+                        throw e;
+                    }
+
+                } else if (sbType == SandboxType.EXTERNAL_SANDBOX) {
+
+                    //TODO: replace this block with whatever code is necessary to properly set up the specified external sandbox
+                    log.severe("Unsupported sandbox type '" + sbType + "' in Problem configuration; cannot execute submission");
+                    throw new Exception ("Unsupported sandbox type '" + sbType + "' in Problem configuration; cannot execute submission");
+                    
+                } else {
+                    
+                    //unknown sandbox type
+                    log.severe("Unknown sandbox type '" + sbType + "' in Problem configuration; cannot execute submission");
+                    throw new Exception ("Unknown sandbox type '" + sbType + "' in Problem configuration; cannot execute submission");
+                }
+            }
+            
+            log.info("Using sandbox type '" + problem.getSandboxType() + "'; problem memory limit = " + problem.getMemoryLimitMB() + "MB");
+            
+            //Problem has a properly-configured sandbox and we're not running a Team client
+            return true;
+            
+        } else {
+            //either the problem has no sandbox configured, or we are executing on a Team client; in either case we don't use a sandbox
+            return false;
+        }
+    }
+
+    /**
+     * Copies the PC2 internal sandbox implementation file into the execution directory.
+     * 
+     * @throws Exception if creation of the sandbox file in the execution directory failed.  
+     *          The Exception which is thrown is whatever Exception occurred during execution
+     *          of the file copy operation.
+     */
+    private void copyPC2Sandbox() throws Exception {
+        
+        //point to the file that we want to create
+        String targetFileName = prefixExecuteDirname(Constants.PC2_INTERNAL_SANDBOX_PROGRAM_NAME);
+
+        //use the VersionInfo class to get the PC2 installation directory
+        VersionInfo versionInfo = new VersionInfo();
+        String home = versionInfo.locateHome();
+        
+        //point to the PC2 Internal Sandbox file (under "/sandbox" in the home, i.e. installation, directory)
+        String srcFileName = home + File.separator + "sandbox" + File.separator + Constants.PC2_INTERNAL_SANDBOX_PROGRAM_NAME ;
+        
+        try {
+            //copy the PC2 internal sandbox program into the execute directory
+            Files.copy(new File(srcFileName).toPath(), new File(targetFileName).toPath());
+        } catch (FileAlreadyExistsException ae) {
+            // this is OK, just use the one there.
+        } catch (Exception e){
+            log.severe("Exception copying PC2 Internal Sandbox to execute directory: " + e.getMessage());
+            executionData.setExecutionException(e);
+            throw e;  
+        }
+    }
+
+    /**
+     * Returns an indication of whether the currently executing client is a Team (as opposed to a Judge, Admin, or Scoreboard for example).
+     * 
+     * @return true if the currently executing client is a Team; false otherwise.
+     */
+    private boolean isTeam() {
+        return executorId.getClientType() == ClientType.Type.TEAM;
     }
 
     private boolean isAppendStderrToStdout() {
@@ -2462,6 +2702,8 @@ public class Executable extends Plugin implements IExecutable {
      *              {:outfile}
      *              {:ansfile}
      *              {:pc2home}
+     *              {:sandboxprogramname} - the sandbox program name as defined in the Problem
+     *              {:sandboxcommandline} - the command line used to invoke the sandbox as defined in the Problem 
      * </pre>
      * 
      * @param dataSetNumber
@@ -2574,10 +2816,29 @@ public class Executable extends Plugin implements IExecutable {
                     newString = replaceString(newString, "{:ansfilename}", nullArgument);
                 }
                 newString = replaceString(newString, "{:timelimit}", Long.toString(problem.getTimeOutInSeconds()));
+              
+                // TODO REFACTOR replace vars with constants for: memlimit, sandboxcommandline,sandboxprogramname
+                newString = replaceString(newString, "{:memlimit}", Integer.toString(problem.getMemoryLimitMB()));
+
+                if (newString.indexOf("{:sandboxcommandline}") > -1) {
+                    if (!StringUtilities.isEmpty(problem.getSandboxCmdLine())) {
+
+                        newString = replaceString(newString, "{:sandboxcommandline}", problem.getSandboxCmdLine());
+                        newString = substituteAllStrings(inRun, newString);
+                    } else {
+                        newString = replaceString(newString, "{:sandboxcommandline}", "");
+                    }
+                }
+
+                if (!StringUtilities.isEmpty(problem.getSandboxProgramName())) {
+                    newString = replaceString(newString, "{:sandboxprogramname}", problem.getSandboxProgramName());
+                } else {
+                    newString = replaceString(newString, "{:sandboxprogramname}", "");
+                }
             } else {
                 log.config("substituteAllStrings() problem is undefined (null)");
             }
-
+            
             if (executionData != null) {
                 if (executionData.getExecuteProgramOutput() != null) {
                     if (executionData.getExecuteProgramOutput().getName() != null) {
@@ -2589,10 +2850,13 @@ public class Executable extends Plugin implements IExecutable {
                 newString = replaceString(newString, "{:exitvalue}", Integer.toString(executionData.getExecuteExitValue()));
                 newString = replaceString(newString, "{:executetime}", Long.toString(executionData.getExecuteTimeMS()));
             }
+            
             String pc2home = new VersionInfo().locateHome();
             if (pc2home != null && pc2home.length() > 0) {
                 newString = replaceString(newString, "{:pc2home}", pc2home);
             }
+
+            
         } catch (Exception e) {
             log.log(Log.CONFIG, "Exception substituting strings ", e);
             // carrying on not required to save exception

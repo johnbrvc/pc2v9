@@ -1,0 +1,94 @@
+#!/bin/bash
+
+# This script installs a Linux CGroup V2 sandbox for pc2.
+
+# Author: John Clevenger
+
+FAIL_EXIT_CODE=43
+FAIL_NO_ARGS_ALLOWED_EXIT_CODE=44
+FAIL_MISSING_CGROUP_CONTROLLERS_FILE=45
+FAIL_MISSING_CGROUP_SUBTREE_CONTROL_FILE=46
+FAIL_CPU_CONTROLLER_NOT_ENABLED=47
+FAIL_MEMORY_CONTROLLER_NOT_ENABLED=48
+
+CGROUP_PATH=/sys/fs/cgroup
+PC2_CGROUP_PATH=$CGROUP_PATH/pc2
+
+# ------------------------------------------------------------
+
+
+if [ "$#" -gt 0 ] ; then
+   echo $0: Unknown command line arguments: $*
+   exit $FAIL_NO_ARGS_ALLOWED_EXIT_CODE
+fi 
+
+# make sure CGroups v2 is installed
+echo Verifying CGroup v2 installation...
+if [ ! -f "$CGROUP_PATH/cgroup.controllers" ]; then
+   echo $0: "It appears CGroups v2 is not installed (missing file 'cgroup.controllers' in $CGROUP_PATH)."
+   echo CGroups v2 must be installed before a PC2 sandbox can be installed
+   echo "(or if CGroups v2 is installed elsewhere from $CGROUP_PATH, edit the CGroup Path in $0)."
+   exit $FAIL_MISSING_CGROUP_CONTROLLERS_FILE
+fi
+
+if [ ! -f "$CGROUP_PATH/cgroup.subtree_control" ]; then
+   echo $0: "It appears CGroups v2 is not installed (missing file 'cgroup.subtree_control' in $CGROUP_PATH)."
+   echo CGroups v2 must be installed before a PC2 sandbox can be installed
+   echo "(or if CGroups v2 is installed elsewhere from $CGROUP_PATH, edit the CGroup Path in $0)."
+   exit $FAIL_MISSING_CGROUP_SUBTREE_CONTROL_FILE
+fi
+
+# make sure the cpu and memory controllers are enabled
+
+if ! grep -q -F "cpu" "$CGROUP_PATH/cgroup.subtree_control"; then
+   echo $0: cgroup.subtree_control in $CGROUP_PATH does not enable cpu controller
+#   echo $0: Perhaps you have: echo +cpu ">$CGROUP_PATH/cgroup.subtree_control"
+   echo $0: Executing: echo +cpu ">$CGROUP_PATH/cgroup.subtree_control"
+   echo +cpu > $CGROUP_PATH/cgroup.subtree_control
+fi
+
+if ! grep -q -F "memory" "$CGROUP_PATH/cgroup.subtree_control"; then
+   echo $0: cgroup.subtree_control in $CGROUP_PATH does not enable memory controller
+   exit $FAIL_MEMORY_CONTROLLER_NOT_ENABLED
+fi
+
+
+# we seem to have a valid CGroup installation
+echo ...done.
+
+# First, remove any existing remnants
+for dir in `ls $PC2_CGROUP_PATH/sandbox* 2>/dev/null`
+do
+	if test -d "$dir"
+	then
+		DEBUG echo Removing existing $dir
+		rmdir "$dir"
+	fi
+done
+if test -d $PC2_CGROUP_PATH
+then
+	rmdir $PC2_CGROUP_PATH
+fi
+
+# Create a pc2 cgroup to be managed by the root cgroup
+echo Creating PC2 CGroup structure...
+sudo mkdir $PC2_CGROUP_PATH
+sudo chown pc2:pc2 $PC2_CGROUP_PATH
+
+# allow the pc2 user to manage the pc2 cgroup files and subgroups.
+# note we do NOT change ownership of the "resource control" interface files, like cpu.max;
+# those must remain under control of the PARENT -- root -- cgroup
+sudo chown pc2:pc2 $PC2_CGROUP_PATH/cgroup.procs
+sudo chown pc2:pc2 $PC2_CGROUP_PATH/cgroup.subtree_control
+#sudo chown pc2:pc2 $PC2_CGROUP_PATH/memory.max
+
+# Have to allow PC2 to write to the ancestor tree cgroup.procs
+sudo chown root.pc2  $CGROUP_PATH/cgroup.procs
+sudo chmod 664 $CGROUP_PATH/cgroup.procs
+
+# Enable the cpu and memory controllers for the pc2 cgroup.
+# Note that this must be done BEFORE creating the pc2sandbox subgroup, so that the subgroup inherits the controllers.
+echo "+cpu +memory" > $PC2_CGROUP_PATH/cgroup.subtree_control 
+
+echo ...done.
+
