@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 
 import edu.csus.ecs.pc2.core.Utilities.DataFileType;
+import edu.csus.ecs.pc2.core.exception.MultipleIssuesException;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
 import edu.csus.ecs.pc2.core.model.Problem;
 import edu.csus.ecs.pc2.core.model.SampleContest;
@@ -514,6 +515,38 @@ public class UtilitiesTest extends AbstractTestCase {
         assertEquals("Expecting data dirs for under "+dataFileBaseDirectory, 2, dataDirs.size());
         
         
+    }
+    
+    /**
+     * test validateCDP to find all data files.
+     * @throws Exception
+     */
+    public void testValidateCDP() throws Exception {
+
+        /**
+         * Contains sample data files
+         */
+        String sampleContestName = "mini";
+        IInternalContest contest = loadFullSampleContest(null, sampleContestName);
+
+        Problem[] problems = contest.getProblems();
+        assertEquals("Expected problem count ", 1, problems.length);
+
+        String cdpDir = getContestSampleCDPConfigDirname(sampleContestName);
+        
+        try {
+            assertTrue("Expected to validate contest at " + cdpDir, Utilities.validateCDP(contest, cdpDir));
+
+        } catch (MultipleIssuesException e) {
+
+            String[] list = e.getIssueList();
+            
+            System.err.println("There were " + list.length + " loading errors.");
+            for (String msg : list) {
+                System.err.println(msg);
+            }
+            fail("Unable to validateCDP at " + cdpDir);
+        }
     }
     
 }
