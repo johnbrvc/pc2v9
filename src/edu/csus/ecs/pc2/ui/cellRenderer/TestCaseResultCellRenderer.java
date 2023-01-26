@@ -79,8 +79,8 @@ public class TestCaseResultCellRenderer extends DefaultTableCellRenderer {
             setNoValidator();
         } else if (text.equalsIgnoreCase("not executed")) {
             setNotExecuted();
-        } else if (text.equalsIgnoreCase("awaiting result")) {
-            setAwaitingResult();
+        } else if (text.equalsIgnoreCase("judging")) {
+            setJudgingResult();
         }
     }
     
@@ -112,7 +112,7 @@ public class TestCaseResultCellRenderer extends DefaultTableCellRenderer {
         setText("(Not Executed)");  
     }
     
-    private void setAwaitingResult() {
+    private void setJudgingResult() {
         setBackground(Color.cyan);
         setForeground(Color.black);
         setFont(new Font(getFont().getName(),Font.ITALIC, 12));
