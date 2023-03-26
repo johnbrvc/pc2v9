@@ -2,9 +2,15 @@
 package edu.csus.ecs.pc2.ui;
 
 import java.awt.BorderLayout;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 
 import edu.csus.ecs.pc2.core.IInternalController;
@@ -15,6 +21,7 @@ import edu.csus.ecs.pc2.core.model.JudgementRecord;
 import edu.csus.ecs.pc2.core.model.Run;
 import edu.csus.ecs.pc2.core.model.RunEvent;
 import edu.csus.ecs.pc2.core.model.Site;
+import edu.csus.ecs.pc2.core.security.Permission;
 
 /**
  * Shows all run judgements for the input run.
@@ -39,6 +46,9 @@ public class ViewJudgementsPane extends JPanePlugin implements UIPlugin {
 
     private MCLB judgementsListbox = null;
 
+//    private MCLB testCasesTable = null;
+    private JPanePlugin testCasesTable = null;
+    
     private JLabel statusLabel = null;
 
     private Run run;
@@ -110,8 +120,11 @@ public class ViewJudgementsPane extends JPanePlugin implements UIPlugin {
         for (int i = 0; i < records.length; i++) {
             Object[] objects = buildJudgmentRow(i + 1, inRun, records[i]);
             judgementsListbox.addRow(objects);
+            
+//            testCasesTable.addRow(objects);
         }
         judgementsListbox.autoSizeAllColumns();
+//        testCasesTable.autoSizeAllColumns();
         
         if (records.length == 1) {
             showMessage("There is " + records.length + " judgement");
@@ -220,7 +233,7 @@ public class ViewJudgementsPane extends JPanePlugin implements UIPlugin {
      * 
      */
     private void initialize() {
-        this.setSize(new java.awt.Dimension(527, 195));
+        this.setSize(new java.awt.Dimension(660, 475));
         this.setLayout(new BorderLayout());
         this.add(getCenterPane(), java.awt.BorderLayout.CENTER);
         this.add(getNorthPane(), java.awt.BorderLayout.NORTH);
@@ -235,8 +248,23 @@ public class ViewJudgementsPane extends JPanePlugin implements UIPlugin {
     private JPanel getCenterPane() {
         if (centerPane == null) {
             centerPane = new JPanel();
+            centerPane.setLayout(new GridBagLayout());
+            GridBagConstraints c = new GridBagConstraints();
+            c.fill = GridBagConstraints.BOTH;
+            c.weighty = 0.75;
+            c.weightx = 0.5;
+            c.gridx = 0;
+            c.gridy = 0;
+            c.insets = new Insets(0, 0, 20, 0);
+            centerPane.add(getJudgementsListbox(), c);
+            c.gridy = 1;
+            c.weighty = 0.5;
+            centerPane.add(getTestCasesTable(), c);
+            if(false) {
             centerPane.setLayout(new BorderLayout());
-            centerPane.add(getJudgementsListbox(), java.awt.BorderLayout.CENTER);
+            centerPane.add(getJudgementsListbox(), java.awt.BorderLayout.NORTH);
+            centerPane.add(getTestCasesTable(), java.awt.BorderLayout.SOUTH);
+            }
         }
         return centerPane;
     }
@@ -286,11 +314,55 @@ public class ViewJudgementsPane extends JPanePlugin implements UIPlugin {
     private MCLB getJudgementsListbox() {
         if (judgementsListbox == null) {
             judgementsListbox = new MCLB();
+            
             Object[] cols = { "##", "Judgement", "Judge", "Active", "Time", "Final", "TWJ", "TTJ", "Comment for team", "Comment for judge", "X time" };
             judgementsListbox.addColumns(cols);
             judgementsListbox.autoSizeAllColumns();
+            
+            judgementsListbox.addListboxListener(new com.ibm.webrunner.j2mclb.event.ListboxListener() {
+                public void rowSelected(com.ibm.webrunner.j2mclb.event.ListboxEvent e) {
+                    System.out.println("Clicked: " + e);
+                }
+                public void rowDeselected(com.ibm.webrunner.j2mclb.event.ListboxEvent e)
+                {
+                    
+                }
+            });
         }
         return judgementsListbox;
+    }
+
+    /**
+     * This method initializes multiColumnListbox
+     * 
+     * @return com.ibm.webrunner.j2mclb.MCLB
+     */
+    private JPanePlugin getTestCasesTable() {
+        if(testCasesTable == null) {
+            testCasesTable = new TestResultsPane();
+        }
+        return(testCasesTable);
+//        Object[] cols = { "##", "Judgement", "Judge", "Active", "Time", "Final", "TWJ", "TTJ", "Comment for team", "Comment for judge", "X time" };
+//        if (testCasesTable == null) {
+//            testCasesTable = new JTableCustomized();
+//
+//            testCasesTable.addMouseListener(new MouseAdapter() {
+//                public void mouseClicked(MouseEvent me) {
+//                    JTable target = (JTable)me.getSource();
+//                    if(target.getSelectedRow() != -1) {
+//                        System.out.println("Row " + target.getSelectedRow() + " selected");
+//                    }
+//                }
+//            });
+//        }
+//        return testCasesTable;
+//      if (testCasesTable == null) {
+//            testCasesTable = new MCLB();
+//            Object[] cols = { "##", "Judgement", "Judge", "Active", "Time", "Final", "TWJ", "TTJ", "Comment for team", "Comment for judge", "X time" };
+//            testCasesTable.addColumns(cols);
+//            testCasesTable.autoSizeAllColumns();
+//        }
+//        return testCasesTable;
     }
 
     @Override
@@ -300,6 +372,7 @@ public class ViewJudgementsPane extends JPanePlugin implements UIPlugin {
     
     public void setContestAndController(IInternalContest inContest, IInternalController inController) {
         super.setContestAndController(inContest, inController);
+        getTestCasesTable().setContestAndController(inContest, inController);
         
         getContest().addRunListener(new RunListenerImplementation());
     }

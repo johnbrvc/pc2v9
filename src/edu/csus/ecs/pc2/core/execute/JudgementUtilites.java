@@ -345,6 +345,36 @@ public final class JudgementUtilites {
         return (RunTestCase[]) list.toArray(new RunTestCase[list.size()]);
     }
     
+
+    /**
+     * Get test cases for last run
+     * Based on Doug Lane's code posted to Slack.
+     * 
+     * @param contest
+     * @param run
+     * @param judgementId
+     * @return null array if no test cases found for judgement in run, else the list of testcases
+     */
+    public static RunTestCase[] getTestCaseArrayForJudgementId(IInternalContest contest, Run run, ElementId judgmentId) {
+        
+        List<RunTestCase> list = new ArrayList<RunTestCase>();
+        try {
+            
+            // Find last test case with ordinal 1 in the list of run cases
+            RunTestCase[] testCases = run.getRunTestCases();
+            for (RunTestCase runTestCase : testCases) {
+                // Found a new start of test cases, so dump old array and make new one
+                if (runTestCase.getJudgementId() == judgmentId) {
+                    list.add(runTestCase);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR in getTestCaseArrayForJudgementId "+e.getMessage());
+            e.printStackTrace();
+        }
+        return (RunTestCase[]) list.toArray(new RunTestCase[list.size()]);
+    }
+
     /**
      * Return a single set of judgements.
      * 

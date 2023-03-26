@@ -56,7 +56,7 @@ public class ViewJudgementsFrame extends JFrame implements UIPlugin {
      * 
      */
     private void initialize() {
-        this.setSize(new Dimension(1024, 329));
+        this.setSize(new Dimension(1024, 500));
         this.setContentPane(getMainPanel());
         this.setDefaultCloseOperation(javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE);
         this.setTitle("Run Judgements");
