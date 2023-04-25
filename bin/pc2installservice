@@ -1,0 +1,50 @@
+#!/bin/bash
+# Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+#
+# Purpose:
+#   This script installs a Linux service that runs the script to create
+#   the cgroup necessary for PC2 sandboxes.  The service is a one-shot service
+#   that simply runs the /usr/pc2/bin/pc2installsandbox shell script
+#
+# Author: John Buck
+
+SCRIPTNAME="$0"
+
+DEBUG=
+#DEBUG="echo Would"
+
+INSTALL_SCRIPT_PATH=/usr/pc2/bin/pc2installsandbox
+SERVICE_NAME=pc2_cgroup.service
+SERVICE_FILE=/usr/pc2/support/system_cgroup/${SERVICE_NAME}
+
+ServiceError()
+{
+	echo $SCRIPTNAME: $*
+	echo $SCRIPTNAME: Service not installed.
+	echo $SCRIPTNAME: For help, please refer to the '"Running in a Sandbox"' Appendix
+	echo $SCRIPTNAME: in the \"PC2 Contest Administrator\'s Installation and Configuration Guide\"
+}
+
+euid=`id -u`
+if test "$euid" -ne 0
+then
+	echo $SCRIPTNAME: This script must be run as super user
+	exit 1
+fi
+if test ! -s ${SERVICE_FILE}
+then
+	ServiceError Can not find service file: ${SERVICE_FILE}
+	exit 2
+fi
+
+if test ! -x ${INSTALL_SCRIPT_PATH}
+then
+	ServiceError The script ${INSTALL_SCRIPT_PATH} must be present and executable
+	exit 3
+fi
+
+$DEBUG cp -a ${SERVICE_FILE} /etc/systemd/system
+$DEBUG systemctl enable ${SERVICE_NAME}
+$DEBUG systemctl start ${SERVICE_NAME}
+$DEBUG systemctl status ${SERVICE_NAME}
+exit 0
