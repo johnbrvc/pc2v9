@@ -18,6 +18,7 @@ import edu.csus.ecs.pc2.core.model.IInternalContest;
 import edu.csus.ecs.pc2.core.model.IRunListener;
 import edu.csus.ecs.pc2.core.model.Judgement;
 import edu.csus.ecs.pc2.core.model.JudgementRecord;
+import edu.csus.ecs.pc2.core.model.Problem;
 import edu.csus.ecs.pc2.core.model.Run;
 import edu.csus.ecs.pc2.core.model.RunEvent;
 import edu.csus.ecs.pc2.core.model.Site;
@@ -322,6 +323,9 @@ public class ViewJudgementsPane extends JPanePlugin implements UIPlugin {
             judgementsListbox.addListboxListener(new com.ibm.webrunner.j2mclb.event.ListboxListener() {
                 public void rowSelected(com.ibm.webrunner.j2mclb.event.ListboxEvent e) {
                     System.out.println("Clicked: " + e);
+                    Problem problem = getContest().getProblem(run.getProblemId());
+                    getTestResultsFrame().setData(run, runFiles, problem, getProblemDataFiles());
+                    getTestResultsFrame().setVisible(true);
                 }
                 public void rowDeselected(com.ibm.webrunner.j2mclb.event.ListboxEvent e)
                 {
