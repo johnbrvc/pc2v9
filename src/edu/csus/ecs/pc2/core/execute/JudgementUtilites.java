@@ -347,6 +347,46 @@ public final class JudgementUtilites {
         }
         return (RunTestCase[]) list.toArray(new RunTestCase[list.size()]);
     }
+
+    /**
+     * Get test cases for specific judgment number
+     * 
+     * @param contest
+     * @param run
+     * @param jnum (judgment number, starts at 1 for first judgment)
+     * @return null array if no test cases judgement in run, else the list of judgements
+     */
+    public static RunTestCase[] getTestCaseArrayForJudgment(IInternalContest contest, Run run, int jnum) {
+        
+        List<RunTestCase> list = new ArrayList<RunTestCase>();
+        int curJudgment = 0;
+        
+        try {
+            
+            // Find last test case with ordinal 1 in the list of run cases
+            RunTestCase[] testCases = run.getRunTestCases();
+            for (RunTestCase runTestCase : testCases) {
+                // Found a new start of test cases, so dump old array and make new one
+                if (runTestCase.getTestNumber() == 1) {
+                    // before starting new list, see if the list we just made is for the
+                    // requested judgment
+                    if(jnum == curJudgment) {
+                        break;
+                    }
+                    list = new ArrayList<RunTestCase>();
+                }
+                list.add(runTestCase);
+            }
+            // if requested judgment not found, return empty list
+            if(curJudgment != jnum) {
+                list.clear();
+            }
+        } catch (Exception e) {
+            System.err.println("ERROR in getLastTestCaseArray "+e.getMessage());
+            e.printStackTrace();
+        }
+        return (RunTestCase[]) list.toArray(new RunTestCase[list.size()]);
+    }
     
     /**
      * Return a single set of judgements.
