@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2019 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.core;
 
 /**
@@ -194,6 +194,20 @@ public final class Constants {
     public static final String PC2_INTERNAL_SANDBOX_COMMAND_LINE = "./{:sandboxprogramname} {:memlimit} {:timelimit}";
 
     public static final String PC2_INTERNAL_SANDBOX_PROGRAM_NAME = "pc2sandbox.sh";
+    
+    /**
+     * Constants for interactive problems
+     */
+    public static final String PC2_INTERNAL_SANDBOX_INTERACTIVE_COMMAND_LINE = "./{:sandboxprogramname} {:memlimit} {:timelimit}" +
+        "{:validator} {:infilename} {:ansfilename} {:testcase}";
+    public static final String PC2_INTERNAL_SANDBOX_INTERACTIVE_NAME = "pc2sandbox_interactive.sh";
+    public static final String PC2_INTERACTIVE_COMMAND_LINE = "./pc2_interactive.sh {:validator} {:infilename} {:ansfilename} {:testcase}";
+    public static final String PC2_INTERACIVE_VALIDATE_COMMAND = "./pc2validate_interactive.sh {:resfile} {:feedbackdir} {:testcase}";
+    
+    /**
+     * Execution info for entire run (all testcases)
+     */
+    public static final String PC2_EXECUTION_RESULTS_NAME_SUFFIX = "executeinfo.ndjson";
     
     /**
      * OS Compatibility constants
