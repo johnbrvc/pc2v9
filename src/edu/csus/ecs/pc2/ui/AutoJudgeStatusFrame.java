@@ -3,7 +3,12 @@ package edu.csus.ecs.pc2.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Graphics;
+import java.awt.Image;
+import java.io.File;
+import java.io.IOException;
 
+import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -109,7 +114,24 @@ public class AutoJudgeStatusFrame extends javax.swing.JFrame implements AutoJudg
             bigAutoJudgeStatusLabel.setText("Waiting for runs");
             bigAutoJudgeStatusLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
             bigAutoJudgeStatusLabel.setFont(new java.awt.Font("Dialog", java.awt.Font.BOLD, 36));
-            centerPane = new JPanel();
+
+            Image iimage = null;           
+            try {
+                iimage = ImageIO.read(new File("panebg.png"));
+            } catch(IOException e) {
+                e.printStackTrace();
+            }
+            final Image image = iimage;
+            centerPane = new JPanel() {
+                @Override
+                protected void paintComponent(Graphics g) {
+                    super.paintComponent(g);
+                    g.drawImage(image, 0, 0, null);
+                    
+                }
+            };
+            
+//            centerPane = new JPanel();
             centerPane.setLayout(new BorderLayout());
             centerPane.add(bigAutoJudgeStatusLabel, java.awt.BorderLayout.CENTER);
         }
