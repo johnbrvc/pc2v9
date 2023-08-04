@@ -217,6 +217,8 @@ public class PluginLoadPane extends JPanePlugin {
         plugins.add(new NSAStandingsPane());
         plugins.add(new QuickJudgePane());
 
+        plugins.add(new SubmitSampleRunsPane());
+
         JPanePlugin[] pluginList = (JPanePlugin[]) plugins.toArray(new JPanePlugin[plugins.size()]);
 
         Arrays.sort(pluginList, new JPluginPaneNameComparator());
