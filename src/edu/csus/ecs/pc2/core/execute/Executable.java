@@ -240,7 +240,7 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
 
     // Where to put the execute results.  This is an ndjson file created by sandbox and interactive execution scripts
     // Each line in the file is the result for a single test case run
-    // TODO: make this file visible from the judge/admin GUI when viewing judgement results.
+    // TODO: future enhancement: make this file visible from the judge/admin GUI when viewing judgement results.
     private String executeInfoFileName = null;
 
 
@@ -253,18 +253,15 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
 
     private String packagePath = "";
     
-    // Indicates which specific judge file is desired.
-    // Used by the method to lookup the filename of a judge's file
-    enum JudgeFileType {
-        INPUT,
-        ANSWER
-    };
+    //The following two members are for debugging Linux specific functionality on Windows.
+    // Note that THESE ARE FOR DEBUGGING PURPOSES only, since most debugging is done on Windows.
+    // Setting either of these to "true" does NOT imply the functionality is supported on Windows at the moment.
+    // TODO: Make sure BOTH of these are set to "false" for a production distribution.
     
     //setting this to True will override the prohibition on invoking a Sandbox when running on Windows.
-    // Note that THIS IS FOR DEBUGGING PURPOSES only, since most debugging is done on Windows.
-    // It does NOT imply any support for Windows sandboxing at the moment.
-    //TODO: change this variable to FALSE before generating a production distribution.
     private boolean debugAllowSandboxInvocationOnWindows = false;
+    //setting this to True will override the prohibition on invoking a Sandbox when running on Windows.
+    private boolean debugAllowInteractiveInvocationOnWindows = false;
 
 
     public Executable(IInternalContest inContest, IInternalController inController, Run run, RunFiles runFiles, IExecutableMonitor msgFrame) {
@@ -432,7 +429,7 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
                     executeProgram(0); // execute with first data set.
                 } else {
                     /**
-                     * compileProgram returns false if 1) runProgram failed (errorString set) 2) compiler fails to create expecte output file (errorString empty) If there is compiler stderr or stdout
+                     * compileProgram returns false if 1) runProgram failed (errorString set) 2) compiler fails to create expected output file (errorString empty) If there is compiler stderr or stdout
                      * we should not add the textPane saying there was an error.
                      */
                     if (!executionData.isCompileSuccess()) {
@@ -907,12 +904,8 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
                 /**
                  * Set filenames if external files.
                  */
-
-                SerializedFile serializedFile = problemDataFiles.getJudgesDataFiles()[dataSetNumber];
-                judgeDataFilename = Utilities.locateJudgesDataFile(problem, serializedFile, getContestInformation().getJudgeCDPBasePath(), Utilities.DataFileType.JUDGE_DATA_FILE);
-
-                serializedFile = problemDataFiles.getJudgesAnswerFiles()[dataSetNumber];
-                judgeAnswerFilename = Utilities.locateJudgesDataFile(problem, serializedFile, getContestInformation().getJudgeCDPBasePath(), Utilities.DataFileType.JUDGE_DATA_FILE);
+                judgeDataFilename = getJudgeFileName(Utilities.DataFileType.JUDGE_DATA_FILE, dataSetNumber);
+                judgeAnswerFilename = getJudgeFileName(Utilities.DataFileType.JUDGE_ANSWER_FILE, dataSetNumber);
 
             } else {
 
@@ -1768,7 +1761,6 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
         String inputDataFileName = null;
         boolean usingSandbox = false ;
         boolean bSandboxSystemError = false;
-        boolean isInteractive = false;
         
         // a one-based test data set number
         int testSetNumber = dataSetNumber + 1;
@@ -1802,7 +1794,11 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
                  * Team executing run
                  */
 
-                // TODO: Something (probably?) has to be done for interactive problems here. (JB)
+                // TODO: Future development: Something (probably?) has to be done for interactive problems here,
+                // even if it is to issue an error message indicating that testing of interactive problems can not be done.
+                // It is unclear what CAN be done without providing access to the interactive validator.  For
+                // interactive problems, it is up to the contestant to test their own submission with their
+                // own interactive validator, IMHO -- JB
                 
                 if (inputDataFileName != null && problem.isReadInputDataFromSTDIN()) {
                     selectAndCopyDataFile(inputDataFileName);
@@ -2071,7 +2067,7 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
                 timeLimitKillTimer.schedule(task, delay);
             }
             
-            // TODO: The IOCollectors are probably not needed for interactive problems since
+            // TODO: Future investigation: The IOCollectors are probably not needed for interactive problems since
             // the I/O is redirected between the submission and the interactive validator in the scripts. (JB)
             // It doesn't hurt to create them, but nothing will every be written to them or read from them. 
             
@@ -2238,8 +2234,8 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
 
             executionData.setExecuteSucess(true);
             
-            // for interactive problem, might be nice to use the interactive validator output as the
-            // program output so the judge's can see what happened.  JB  TODO
+            // TODO: Future development: for interactive problems, it might be nice to use the interactive validator output as the
+            // program output so the judge's can see what happened. JB
             executionData.setExecuteProgramOutput(new SerializedFile(prefixExecuteDirname(EXECUTE_STDOUT_FILENAME)));
             executionData.setExecuteStderr(new SerializedFile(prefixExecuteDirname(EXECUTE_STDERR_FILENAME)));
 
@@ -2476,10 +2472,8 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
         
         log.info("Setting up problem " + problem.getShortName() + " for interactive validation");
             
-        //check the OS to be sure we have a sandbox supported
-        //double-up on the use of the debugAllowSandboxInvocationOnWindows debug flag.
-        //TODO: refactor name of debugAllowSandboxInvocationOnWindows to something more general (JB)
-        if (OSCompatibilityUtilities.isRunningOnWindows() && !debugAllowSandboxInvocationOnWindows) {
+        //check the OS to be sure we support interactive problems
+        if (OSCompatibilityUtilities.isRunningOnWindows() && !debugAllowInteractiveInvocationOnWindows) {
             
             log.severe("Attempt to execute a problem configured with an interactive validator on a Windows system: not supported");
             throw new Exception ("Interactive Validators are not supported on Windows OS");
@@ -3029,7 +3023,7 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
                     newString = replaceString(newString, "{:executeinfofilename}", Constants.PC2_EXECUTION_RESULTS_NAME_SUFFIX);
                     log.config("substituteAllStrings() executeInfoFileName is null, using default basename" + Constants.PC2_EXECUTION_RESULTS_NAME_SUFFIX);
                 }
-                String fileName = getJudgeFileName(JudgeFileType.INPUT, dataSetNumber-1);
+                String fileName = getJudgeFileName(Utilities.DataFileType.JUDGE_DATA_FILE, dataSetNumber-1);
                 if(fileName == null) {
                     problem.getDataFileName(dataSetNumber);
                 }
@@ -3038,7 +3032,7 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
                 } else {
                     newString = replaceString(newString, "{:infilename}", nullArgument);
                 }
-                fileName = getJudgeFileName(JudgeFileType.ANSWER, dataSetNumber-1);
+                fileName = getJudgeFileName(Utilities.DataFileType.JUDGE_ANSWER_FILE, dataSetNumber-1);
                 if(fileName == null) {
                         problem.getAnswerFileName(dataSetNumber);
                 }
@@ -3531,25 +3525,26 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
      * @param wantInput - boolean indicating if we want the input file (true).  If false, we want the answer file
      * @param setIndex - Which dataset element number are we interested in [0, #datasets-1]
      */
-    private String getJudgeFileName(JudgeFileType type, int setIndex)
+    private String getJudgeFileName(Utilities.DataFileType type, int setIndex)
     {
         String result = null;
+        SerializedFile serializedFile = null;
         
         try {
             // it's a little more work for external files
             if (problem.isUsingExternalDataFiles()) {
-                SerializedFile serializedFile;
                 
-                if(type == JudgeFileType.INPUT) {
+                if(type == Utilities.DataFileType.JUDGE_DATA_FILE) {
                     serializedFile = problemDataFiles.getJudgesDataFiles()[setIndex];
                 } else {
                     serializedFile = problemDataFiles.getJudgesAnswerFiles()[setIndex];               
                 }
-                result = Utilities.locateJudgesDataFile(problem, serializedFile, getContestInformation().getJudgeCDPBasePath(), Utilities.DataFileType.JUDGE_DATA_FILE);
+                //Note: last argument (type) is unused in locateJudgesDataFile
+                result = Utilities.locateJudgesDataFile(problem, serializedFile, getContestInformation().getJudgeCDPBasePath(), type);
             } else {
                 // For internal files, the appropriate data files are copied to the FIRST datafile's name in the
                 // execute folder, so we always return that one.
-                if(type == JudgeFileType.INPUT) {
+                if(type == Utilities.DataFileType.JUDGE_DATA_FILE) {
                     result = prefixExecuteDirname(problem.getDataFileName());
                 } else {
                     result = prefixExecuteDirname(problem.getAnswerFileName());
@@ -3557,7 +3552,12 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
             }
         } catch (Exception e)
         {
-            log.log(Log.WARNING, "Can not get " + type.toString() + " filename for dataset " + (setIndex+1) + ": " + e.getMessage(), e);            
+            //if we got far enough to get the serialized file, show the expected name in the log message
+            if(serializedFile != null) {
+                log.log(Log.WARNING, "Can not get " + type.toString() + " expected filename (" + serializedFile.getName() + ") for dataset " + (setIndex+1) + ": " + e.getMessage(), e);
+            } else {
+                log.log(Log.WARNING, "Can not get " + type.toString() + " filename for dataset " + (setIndex+1) + ": " + e.getMessage(), e);
+            }
         }
         return(result);
     }
