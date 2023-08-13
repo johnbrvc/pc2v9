@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2022 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.core;
 
 import java.io.BufferedReader;
@@ -33,8 +33,6 @@ import edu.csus.ecs.pc2.VersionInfo;
 import edu.csus.ecs.pc2.core.exception.MultipleIssuesException;
 import edu.csus.ecs.pc2.core.log.Log;
 import edu.csus.ecs.pc2.core.log.StaticLog;
-import edu.csus.ecs.pc2.core.model.ClientId;
-import edu.csus.ecs.pc2.core.model.ClientType.Type;
 import edu.csus.ecs.pc2.core.model.ContestInformation;
 import edu.csus.ecs.pc2.core.model.Group;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
@@ -78,12 +76,20 @@ public final class Utilities {
     public static final String ISO_8601_TIMEDATE_FORMAT_WITH_MS = "yyyy-MM-dd'T'HH:mm:ss.SSSX";
 
     /**
-     * CCS directory where data files are stored (under problem short name).
+     * CCS directory where secret data files are stored (under problem short name).
      * 
      * @see #getSecretDataPath(String, Problem)
      * @see #getSecretDataPath(String, String)
      */
     public static final String SECRET_DATA_DIR = "data" + File.separator + "secret";
+
+    /**
+     * CCS directory where sample data files are stored (under problem short name).
+     * 
+     * @see #getSampleDataPath(String, Problem)
+     * @see #getSampleDataPath(String, String)
+     */
+    public static final String SAMPLE_DATA_DIR = "data" + File.separator + "sample";
 
     private static SimpleDateFormat format = new SimpleDateFormat(DATE_TIME_FORMAT_STRING);
 
@@ -153,6 +159,9 @@ public final class Utilities {
 
     /**
      * Return CCS path for input data and answer file names.
+     * 
+     * @param baseCDPPath Judges datafile path or CDP Path
+     * @param problemShortName
      */
     public static String getSecretDataPath(String baseCDPPath, String problemShortName) {
         return baseCDPPath + File.separator + problemShortName + File.separator + SECRET_DATA_DIR;
@@ -160,9 +169,32 @@ public final class Utilities {
 
     /**
      * Return CCS path for input data and answer file names.
+     * 
+     * @param baseCDPPath Judge's data file path or CDP Path
+     * @param problem The problem whose data files we're looking for
      */
     public static String getSecretDataPath(String baseCDPPath, Problem problem) {
         return getSecretDataPath(baseCDPPath, problem.getShortName());
+    }
+
+    /**
+     * Return CCS path for sample input data and answer file names.
+     * 
+     * @param baseCDPPath Judges sample datafile path or CDP Path
+     * @param problemShortName
+     */
+    public static String getSampleDataPath(String baseCDPPath, String problemShortName) {
+        return baseCDPPath + File.separator + problemShortName + File.separator + SAMPLE_DATA_DIR;
+    }
+
+    /**
+     * Return CCS path for sample input data and answer file names.
+     * 
+     * @param baseCDPPath Judge's sample data file path or CDP Path
+     * @param problem The problem whose data files we're looking for
+     */
+    public static String getSampleDataPath(String baseCDPPath, Problem problem) {
+        return getSampleDataPath(baseCDPPath, problem.getShortName());
     }
 
     /**
@@ -977,6 +1009,13 @@ public final class Utilities {
                 if (fileExists(testFileName)) {
                     return testFileName;
                 }
+
+                // Try sample now.  We do this so a judge can find it on THEIR path instead of the server's CDP Path, which
+                // is what getAbsolutePath() does as a last resort
+                testFileName = getSampleDataPath(alternateCDPPath, problem) + File.separator + serializedFile.getName();
+                if (fileExists(testFileName)) {
+                    return testFileName;
+                }
             }
 
             String secretPathPattern = File.separator + SECRET_DATA_DIR + File.separator;
@@ -1004,6 +1043,10 @@ public final class Utilities {
                 return testFileName;
             }
 
+            // This is a last resort.  For the server, or any client who has a copy of the entire CDP folder in the same location,
+            // this will work fine.  Otherwise, the file won't be found, and, hopefully it's in the Judge's CDP Path tested above.
+            // TODO: (Future work) The administrator should have its own data path so remote admin's can find files in a location other than
+            // the judge's data path or the server's CDP path.
             testFileName = serializedFile.getAbsolutePath();
 
             if (fileExists(testFileName)) {
@@ -1074,15 +1117,17 @@ public final class Utilities {
      * Get the full data files names for input files.
      * <P>
      * For internal data files, the base path is the executableDir. <br>
-     * For external files (aka CDP files) on the JUDGE the path is from {@link ContestInformation#getJudgeCDPBasePath()} where ContestInformation is in {@link IInternalContest#getContestInformation()}
+     * For external files (aka CDP files) both the ADMIN and JUDGE look in 2 places since this is what Executable does:
+     * {@link ContestInformation#getJudgeCDPBasePath()} where ContestInformation is in {@link IInternalContest#getContestInformation()}
      * . <br>
-     * For external files (aka CDP files) on the ADMIN (or JUDGE without the CDP path set) the path is stored in the {@link Problem#getExternalDataFileLocation()}
+     * and {@link Problem#getExternalDataFileLocation()}
+     * We call locateJudgesDataFile() to find each file, since this is exactly what Executable does, and we want to do the same thing here.
      * 
      * @param contest
      * @param problem
      * @param serializedFiles
      *            list of files
-     * @param executableDir
+     * @param executableDir (only used if not using external data files)
      * @return
      */
     public static String[] getProblemfullFilenames(IInternalContest contest, Problem problem, SerializedFile[] serializedFiles, String executableDir) {
@@ -1090,40 +1135,22 @@ public final class Utilities {
         ArrayList<String> output = new ArrayList<String>();
 
         if (problem.isUsingExternalDataFiles()) {
-            ClientId id = contest.getClientId();
-            if (id == null) {
-                throw new RuntimeException("contest clientid is null");
-            }
 
             String judgeDataFilesPath = getJudgeCDPLocation(contest);
 
-            if (!"".equals(judgeDataFilesPath)) {
-                judgeDataFilesPath = Utilities.getSecretDataPath(judgeDataFilesPath, problem) + File.separator;
-                File judgeDir = new File(judgeDataFilesPath);
-                if (!judgeDir.isDirectory()) {
-                    judgeDataFilesPath = judgeDataFilesPath.replaceFirst(".data.secret", "");
-                }
-            }
-
             for (SerializedFile serializedFile : serializedFiles) {
 
-                if (id.getClientType() == Type.ADMINISTRATOR || (id.getClientType() == Type.JUDGE && "".equals(judgeDataFilesPath))) {
-                    output.add(serializedFile.getAbsolutePath());
-
-                } else {
-
-                    // if we have a judgeDataFilesPath use it, otherwise continue with the normal handling
-                    if (!"".equals(judgeDataFilesPath)) {
-                        String filename = judgeDataFilesPath + serializedFile.getName();
-                        output.add(filename);
-                    } else if (executableDir == null) {
-                        output.add(serializedFile.getName());
-                    } else {
-                        output.add(executableDir + File.separator + serializedFile.getName());
-                    }
+                // Note that the last argument, DataFileType.JUDGE_DATA_FILE is NOT used by locateJudgesDataFile, since the type
+                // of the file, input or answer, is determined by the serializedFiles array passed in.
+                // TODO: (future review) re-factor to remove last argument from locateJudgesDataFile()
+                String filename = locateJudgesDataFile(problem, serializedFile, judgeDataFilesPath, DataFileType.JUDGE_DATA_FILE);
+                
+                if(filename == null) {
+                    // If we can't locate the file, just use the executable directory
+                    filename = executableDir + File.separator + serializedFile.getName();                    
                 }
+                output.add(filename);
             }
-
         } else {
 
             for (SerializedFile serializedFile : serializedFiles) {
@@ -1339,21 +1366,34 @@ public final class Utilities {
                         int missingData = 0;
                         int missingAnswer = 0;
 
+                        // secret data path has to be there.  Sample, does not.  But, we do have to check for the existance of files not found in
+                        // the secret folder, so we do need to get the Sample path.
+                        String sampleDataPath = getSampleDataPath(cdpPath, problem);
+                        
                         for (int i = 0; i < problem.getNumberTestCases(); i++) {
                             String dataFile = problem.getDataFileName(i + 1);
                             String ansFile = problem.getAnswerFileName(i + 1);
 
-                            String judgeFileName = dataPath + File.separator + dataFile;
-                            String answerFilename = dataPath + File.separator + ansFile;
-
-                            if (dataFile != null && !isFileThere(judgeFileName)) {
-                                messages.add(problemTitle + "\tMissing judge file '" + dataFile + "' in " + dataPath);
-                                missingData++;
+                            if(dataFile != null) {
+                                String judgeFileName = dataPath + File.separator + dataFile;
+                                if (!isFileThere(judgeFileName)) {
+                                    String judgeSampleFileName = sampleDataPath + File.separator + dataFile;
+                                    if(!isFileThere(judgeSampleFileName)) {
+                                        messages.add(problemTitle + "\tMissing judge file '" + dataFile + "' in " + dataPath + " or " + sampleDataPath);
+                                        missingData++;
+                                    }
+                                }
                             }
-
-                            if (ansFile != null && !isFileThere(answerFilename)) {
-                                messages.add(problemTitle + "\tMissing answer file '" + ansFile + "' in " + dataPath);
-                                missingAnswer++;
+                            
+                            if(ansFile != null) {
+                                String answerFilename = dataPath + File.separator + ansFile;
+                                if (!isFileThere(answerFilename)) {
+                                    String judgeSampleAnsFileName = sampleDataPath + File.separator + ansFile;
+                                    if(!isFileThere(judgeSampleAnsFileName)) {
+                                        messages.add(problemTitle + "\tMissing answer file '" + dataFile + "' in " + dataPath + " or " + sampleDataPath);
+                                        missingData++;
+                                    }
+                                }
                             }
 
                         }
