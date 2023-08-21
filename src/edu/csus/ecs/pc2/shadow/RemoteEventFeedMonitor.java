@@ -633,7 +633,9 @@ public class RemoteEventFeedMonitor implements Runnable {
                 }
                 break;
             }
-            if(retryConnectDelay > 0) {
+            // Only sleep if we want to keep running.  It's possible someone is trying to stop shadowing,
+            // so there's no sense in sleeping
+            if(retryConnectDelay > 0 && keepRunning) {
                 logAndDebugPrint(log, Level.INFO, "Attempted to reconnect to remote in " + retryConnectDelay + "ms");
                 try {
                     Thread.sleep(retryConnectDelay);
@@ -642,6 +644,18 @@ public class RemoteEventFeedMonitor implements Runnable {
                 }
             }
         } // keepRunning
+        logAndDebugPrint(log, Level.INFO, "RemoteEventFeedMonitor thread terminates");
+        if(monitorStatus != null) {
+            monitorStatus.connectClosed("RemoteEventFeedMonitor thread terminates.");;
+        }
+        // close socket so it doesn't linger
+        try {
+            if(remoteInputStream != null) {
+                remoteInputStream.close();
+            }
+        } catch(Exception e) {
+            logAndDebugPrint(log, Level.WARNING, "Exception closing remote input stream", e);
+        }
     }
     
     
@@ -980,6 +994,14 @@ public class RemoteEventFeedMonitor implements Runnable {
      */
     public void stop() {
         keepRunning = false;
+        // in case something unexpected happens, which, when using sockets, is ALWAYS a possiblity
+        // we really don't care if something does go not work here, since it's stopping anyway
+        try {
+            if(remoteContestAPIAdapter != null) {
+                remoteContestAPIAdapter.disconnect();
+            }
+        } catch(Exception e) {
+        }
     }
 
 }

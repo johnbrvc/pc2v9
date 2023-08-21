@@ -29,6 +29,7 @@ public class RemoteContestAPIAdapter implements IRemoteContestAPIAdapter {
     URL remoteURL;
     String login;
     String password;
+    HttpURLConnection remoteConn = null;
     
     /**
      * Constructs a RemoteRunMonitor with the specified values.
@@ -51,6 +52,8 @@ public class RemoteContestAPIAdapter implements IRemoteContestAPIAdapter {
             //if we got a connection object, try connecting (merely creating a connection doesn't actually "connect")
             if (conn!=null) {
                 conn.connect();
+                // Explicitly disconnect, or socket will linger on
+                conn.disconnect();
                 //if we get here, the connection worked; otherwise, either an exception or a fall-through to return false occurs
                 return true;
             }
@@ -144,11 +147,20 @@ public class RemoteContestAPIAdapter implements IRemoteContestAPIAdapter {
      * @throws IOException
      */
     private InputStream getHTTPInputStream(URL remoteURL2, String user, String password) throws IOException {
-        HttpURLConnection conn = HTTPSSecurity.createConnection(remoteURL2, user, password);
-        conn.setReadTimeout(5 * 60 * 1000); // 5 min timeout
-        return new BufferedInputStream(conn.getInputStream());
+        remoteConn = HTTPSSecurity.createConnection(remoteURL2, user, password);
+        remoteConn.setReadTimeout(5 * 60 * 1000); // 5 min timeout
+        return new BufferedInputStream(remoteConn.getInputStream());
     }
-
+    
+    @Override
+    public void disconnect()
+    {
+        if(remoteConn != null) {
+            remoteConn.disconnect();
+            remoteConn = null;
+        }
+    }
+    
     @Override
     public RemoteContestConfiguration getRemoteContestConfiguration() {
         
@@ -224,8 +236,11 @@ public class RemoteContestAPIAdapter implements IRemoteContestAPIAdapter {
             URL url = new URL(eventFeedURLString);
             stream = getHTTPInputStream(url, login, password);
         } catch (IOException e) {
-            // TODO shadow Need to decide how to handle this exception/error
-            e.printStackTrace();
+            // Shadow will handle a 'null' return for the InputStream.  It is possible an exception
+            // is thrown because the user stopped shadowing before the low-level URL code has
+            // finished its HTTP header negotiation.  Now, when the user stops showing, the socket
+            // is simply closed.  This causes an exception, which is fine, and is caught here, causing
+            // a 'null' to be returned to the caller.
         }
         return stream ;
     }

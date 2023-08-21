@@ -114,4 +114,12 @@ public interface IRemoteContestAPIAdapter {
      */
     public String getRemoteJSON(String endpoint);
     
+    /**
+     * Closes the socket immediately with extreme prejudice.  This is needed because if the InputStream if blocked reading,
+     * it could never wake up.  We need to go away as soon as shadowing is stopped.
+     * 
+     * @return
+     */
+    public void disconnect();
+    
 }

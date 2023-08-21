@@ -4,7 +4,6 @@ package edu.csus.ecs.pc2.shadow;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -963,8 +962,7 @@ public class ShadowController {
     }
 
     private void showMessage(String message) {
-        System.out.println(new Date() + " " +message);
-//        getLog().info(message);
+        getLog().info(message);
     }
 
     private void updateCached(ContestInformation ci) {

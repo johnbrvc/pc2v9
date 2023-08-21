@@ -395,14 +395,15 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
     protected void stopShadowing() {
 
         if (shadowController!=null) {
-            shadowController.stop();
             currentlyShadowing = false;
+            shadowController.stop();
             shadowingStatusValueLabel.setText("OFF");
             getStartStopButton().setText("Start Shadowing");
             getStartStopButton().setToolTipText("Start shadowing operations on the specified remote CCS");
             getController().getLog().info("Shadowing stopped");
             // save last token on server
             updateContestInformation();
+            shadowController = null;
         }
         updateGUI();
     }
@@ -775,6 +776,7 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
      */
     private void updateContestInformation() {
         ShadowInformation shadowInfo = getFromFields();
+        boolean changed = false;
         
 //        System.out.println ("UpdateContestInformation(): got the following shadow info:");
 //        System.out.println ("   Shadow Enabled: " + shadowInfo.isShadowModeEnabled()
@@ -792,13 +794,26 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
         
         ContestInformation contestInfo = getContest().getContestInformation();
         
-        contestInfo.setShadowMode(shadowInfo.isShadowModeEnabled());
-        contestInfo.setPrimaryCCS_URL(shadowInfo.getRemoteCCSURL());
-        contestInfo.setPrimaryCCS_user_login(shadowInfo.getRemoteCCSLogin());
-        contestInfo.setPrimaryCCS_user_pw(shadowInfo.getRemoteCCSPassword());
-        contestInfo.setLastShadowEventID(shadowInfo.getLastEventID());
-        
-        getController().updateContestInformation(contestInfo);
+        if(contestInfo.isShadowMode() != shadowInfo.isShadowModeEnabled()) {
+            contestInfo.setShadowMode(shadowInfo.isShadowModeEnabled());
+            changed = true;
+        }
+        if(!contestInfo.getPrimaryCCS_URL().equals(shadowInfo.getRemoteCCSURL())){
+            contestInfo.setPrimaryCCS_URL(shadowInfo.getRemoteCCSURL());
+            changed = true;
+        }
+        if(!contestInfo.getPrimaryCCS_user_login().equals(shadowInfo.getRemoteCCSLogin())){
+            contestInfo.setPrimaryCCS_user_pw(shadowInfo.getRemoteCCSPassword());
+            changed = true;
+        }
+        if(!contestInfo.getLastShadowEventID().equals(shadowInfo.getLastEventID())){
+            contestInfo.setLastShadowEventID(shadowInfo.getLastEventID());
+            changed = true;
+        }
+        // only notify listeners if something changed.
+        if(changed) {
+            getController().updateContestInformation(contestInfo);
+        }
     }
 
     class ContestInformationListenerImplementation implements IContestInformationListener {

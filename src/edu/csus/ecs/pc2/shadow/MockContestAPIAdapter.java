@@ -151,6 +151,16 @@ public class MockContestAPIAdapter implements IRemoteContestAPIAdapter {
      * {@inheritDoc}
      * 
      */
+    public void disconnect()
+    {
+        return;
+    }
+    
+    @Override
+    /**
+     * {@inheritDoc}
+     * 
+     */
     public String getRemoteJSON(String endpoint) {
 
         // TODO Add more data per end point.
