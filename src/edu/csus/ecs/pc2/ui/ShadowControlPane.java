@@ -803,6 +803,10 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
             changed = true;
         }
         if(!contestInfo.getPrimaryCCS_user_login().equals(shadowInfo.getRemoteCCSLogin())){
+            contestInfo.setPrimaryCCS_user_login(shadowInfo.getRemoteCCSLogin());
+            changed = true;
+        }
+        if(!contestInfo.getPrimaryCCS_user_pw().equals(shadowInfo.getRemoteCCSPassword())){
             contestInfo.setPrimaryCCS_user_pw(shadowInfo.getRemoteCCSPassword());
             changed = true;
         }
