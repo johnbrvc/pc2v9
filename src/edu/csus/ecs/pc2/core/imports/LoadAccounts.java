@@ -235,7 +235,10 @@ public class LoadAccounts {
         account.setGroupId(existingAccount.getGroupId());
         account.setLongSchoolName(new String(existingAccount.getLongSchoolName()));
         account.setShortSchoolName(new String(existingAccount.getShortSchoolName()));
-
+        account.setInstitutionCode(new String(existingAccount.getInstitutionCode()));
+        account.setInstitutionName(new String(existingAccount.getInstitutionName()));
+        account.setInstitutionShortName(new String(existingAccount.getInstitutionShortName()));
+        
         // now start updating fields
         
         if (passwordColumn != -1 && values.length > passwordColumn) {
