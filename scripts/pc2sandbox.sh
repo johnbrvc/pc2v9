@@ -33,16 +33,30 @@ FAIL_SANDBOX_ERROR=$((FAIL_RETCODE_BASE+54))
 MAXPROCS=32
 
 # taskset cpu mask for running submission on single processor
-CPUMASK=0x01
+cpunum=${USER/judge/}
+if [[ "$cpunum" =~ ^[1-5]$ ]]
+then
+	CPUMASK=$((1<<(cpunum-1)))
+else
+	CPUMASK=0x08
+fi
 
 # Process ID of submission
 submissionpid=""
 
 CGROUP_PATH=/sys/fs/cgroup
 PC2_CGROUP_PATH=$CGROUP_PATH/pc2
-# TODO: should have unique runbox in case multiple instances are executing in separate judges
-# For now, just use userid
+
+# Name of sandbox for this run
 PC2_SANDBOX_CGROUP_PATH=$PC2_CGROUP_PATH/sandbox_$USER
+
+# Create unique sandbox name, if possible
+SESSIONID=`ps -ho sess $$`
+# If session is a valid number, tack that on for the unique ID
+if ((SESSIONID))
+then
+	PC2_SANDBOX_CGROUP_PATH="${PC2_SANDBOX_CGROUP_PATH}_$((SESSIONID))"
+fi
 
 # control whether the script outputs debug/tracing info
 _DEBUG="on"   # change this to anything other than "on" to disable debug/trace output
@@ -70,11 +84,14 @@ SAGE
 HandleTerminateFromPC2()
 {
 	DEBUG echo "Received TERMINATE signal from PC2"
+	DEBUG echo "Killing off submission process group $submissionpid and all children"
+	# Kill off process group
 	if test -n "$submissionpid"
 	then
-		DEBUG echo "Killing off submission process $submissionpid"
-		kill -9 "$submissionpid"
+		kill -9 -$submissionpid
 	fi
+	# and... extra stragglers
+	pkill -9 -P $$
 	DEBUG echo $0: Wall time exceeded - exiting with code $FAIL_WALL_TIME_LIMIT_EXCEEDED
 	exit $FAIL_WALL_TIME_LIMIT_EXCEEDED 
 }
@@ -189,8 +206,9 @@ TIMELIMIT_US=$((TIMELIMIT * 1000000))
 DEBUG echo setting cpu limit to $TIMELIMIT_US microseconds "("ulimit -t $TIMELIMIT ")"
 ulimit -t $TIMELIMIT
 
-DEBUG echo setting maximum user processes to $MAXPROCS + whatever the user is currently using
-ulimit -u $((MAXPROCS+`ps -T -u $USER | wc -l`))
+MAXPROCS=$((MAXPROCS+`ps -T -u $USER | wc -l`))
+DEBUG echo setting maximum user processes to $MAXPROCS
+ulimit -u $MAXPROCS
 
 # Remember wall time when we started
 starttime=`GetTimeInMicros`
@@ -210,14 +228,17 @@ fi
 
 # since we don't know how to use cgroup-tools to execute, just execute it directly (it's a child so it
 #  should still fall under the cgroup limits).
-DEBUG echo Executing $COMMAND $* 
+DEBUG echo Executing "setsid taskset $CPUMASK $COMMAND $*"
 
 # Set up trap handler to catch wall-clock time exceeded and getting killed by PC2's execute timer
 trap HandleTerminateFromPC2 15
 
-taskset $CPUMASK $COMMAND $* <&0 &
-# Remember child's PID for possible killing off later
+# This will create a new process group
+#bash -imc "taskset ${CPUMASK} $COMMAND $*" <&0 &
+setsid taskset ${CPUMASK} $COMMAND $* <&0 &
+# Remember child's PID/PGRP for possible killing off later
 submissionpid=$!
+
 # Wait for child
 wait $submissionpid
 
@@ -226,6 +247,12 @@ COMMAND_EXIT_CODE=$?
 # See if we were killed due to memory - this is a kill 9 if it happened
 
 kills=`grep oom_kill $PC2_SANDBOX_CGROUP_PATH/memory.events | cut -d ' ' -f 2`
+
+# Kill off process group
+kill -9 -$submissionpid
+
+# Kill off all children
+pkill -9 -P $$
 
 if test "$kills" != "0"
 then
