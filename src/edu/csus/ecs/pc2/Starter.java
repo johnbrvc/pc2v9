@@ -1,6 +1,13 @@
 // Copyright (C) 1989-2019 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2;
 
+import java.awt.Component;
+import java.util.Arrays;
+
+import javax.swing.LookAndFeel;
+import javax.swing.UIManager;
+import javax.swing.plaf.nimbus.NimbusLookAndFeel;
+
 import edu.csus.ecs.pc2.core.InternalController;
 import edu.csus.ecs.pc2.core.model.InternalContest;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
@@ -35,6 +42,24 @@ public final class Starter  {
         
         IInternalContest model = new InternalContest();
         InternalController controller = new InternalController (model);
+        
+        try {
+            LookAndFeel feel = UIManager.getLookAndFeel();
+            System.err.println("The current look and feel is: " + feel.toString());
+            UIManager.setLookAndFeel(new NimbusLookAndFeel() {
+                @Override
+                public void provideErrorFeedback(Component component) {
+    
+                    System.err.println("Got a beep from " + component.toString() + ":");
+                    System.err.println(Arrays.toString(Thread.currentThread().getStackTrace()).replace( ',', '\n' ));
+                    // You want error feedback 
+                    super.provideErrorFeedback(component);
+    
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Can't set look and feel " + e.toString());
+        }
         
         if (args.length > 0 && args[0].equals(AppConstants.TEAM1_OPTION_STRING)){
             try {
