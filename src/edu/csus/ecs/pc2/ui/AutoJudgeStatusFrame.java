@@ -3,12 +3,8 @@ package edu.csus.ecs.pc2.ui;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Image;
-import java.io.File;
-import java.io.IOException;
+import java.util.Properties;
 
-import javax.imageio.ImageIO;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -33,12 +29,18 @@ public class AutoJudgeStatusFrame extends javax.swing.JFrame implements AutoJudg
      * 
      */
     private static final long serialVersionUID = -4357639159960022863L;
+    
+    private static final String BACKGROUND_PROPERTIES_FILE = "ajbackground.properties";
+    private static final String SHOWBIGLABEL_KEY = "showbiglabel";
 
-    private JPanel mainAJStausPane = null;
+    private String clientName = null;
+    private boolean showBigLabel = true;
+    
+    private JPanel mainAJStatusPane = null;
 
     private JPanel buttonPane = null;
 
-    private JPanel centerPane = null;
+    private JBackgroundImagePanel centerPane = null;
 
     private JPanel messagePanel = null;
 
@@ -70,7 +72,7 @@ public class AutoJudgeStatusFrame extends javax.swing.JFrame implements AutoJudg
         this.setDefaultCloseOperation(javax.swing.WindowConstants.HIDE_ON_CLOSE);
         this.setContentPane(getMainAJStausPane());
         this.setTitle("Auto Judge Status");
-
+        getCenterPane().resizeParentToFit(this);
     }
 
     /**
@@ -79,14 +81,14 @@ public class AutoJudgeStatusFrame extends javax.swing.JFrame implements AutoJudg
      * @return javax.swing.JPanel
      */
     private JPanel getMainAJStausPane() {
-        if (mainAJStausPane == null) {
-            mainAJStausPane = new JPanel();
-            mainAJStausPane.setLayout(new BorderLayout());
-            mainAJStausPane.add(getButtonPane(), java.awt.BorderLayout.SOUTH);
-            mainAJStausPane.add(getCenterPane(), java.awt.BorderLayout.CENTER);
-            mainAJStausPane.add(getMessagePanel(), java.awt.BorderLayout.NORTH);
+        if (mainAJStatusPane == null) {
+            mainAJStatusPane = new JPanel();
+            mainAJStatusPane.setLayout(new BorderLayout());
+            mainAJStatusPane.add(getButtonPane(), java.awt.BorderLayout.SOUTH);
+            mainAJStatusPane.add(getCenterPane(), java.awt.BorderLayout.CENTER);
+            mainAJStatusPane.add(getMessagePanel(), java.awt.BorderLayout.NORTH);
         }
-        return mainAJStausPane;
+        return mainAJStatusPane;
     }
 
     /**
@@ -102,36 +104,32 @@ public class AutoJudgeStatusFrame extends javax.swing.JFrame implements AutoJudg
         }
         return buttonPane;
     }
-
+        
     /**
      * This method initializes jPanel
      * 
      * @return javax.swing.JPanel
      */
-    private JPanel getCenterPane() {
+    private JBackgroundImagePanel getCenterPane() {
         if (centerPane == null) {
+            centerPane = new JBackgroundImagePanel();
+            centerPane.setPropertiesFileName(BACKGROUND_PROPERTIES_FILE);
+            showBigLabel = true;
+            
+            Properties props = centerPane.getPanelProperties();
+            if(props != null) {
+                String showLabelVal = props.getProperty(SHOWBIGLABEL_KEY);
+                if(showLabelVal != null) {;
+                    showBigLabel = Boolean.valueOf(showLabelVal);
+                }
+            }
             bigAutoJudgeStatusLabel = new JLabel();
-            bigAutoJudgeStatusLabel.setText("Waiting for runs");
+            if(showBigLabel) {
+                bigAutoJudgeStatusLabel.setText("Waiting for runs");
+            }
             bigAutoJudgeStatusLabel.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
             bigAutoJudgeStatusLabel.setFont(new java.awt.Font("Dialog", java.awt.Font.BOLD, 36));
 
-            Image iimage = null;           
-            try {
-                iimage = ImageIO.read(new File("panebg.png"));
-            } catch(IOException e) {
-                e.printStackTrace();
-            }
-            final Image image = iimage;
-            centerPane = new JPanel() {
-                @Override
-                protected void paintComponent(Graphics g) {
-                    super.paintComponent(g);
-                    g.drawImage(image, 0, 0, null);
-                    
-                }
-            };
-            
-//            centerPane = new JPanel();
             centerPane.setLayout(new BorderLayout());
             centerPane.add(bigAutoJudgeStatusLabel, java.awt.BorderLayout.CENTER);
         }
@@ -225,12 +223,32 @@ public class AutoJudgeStatusFrame extends javax.swing.JFrame implements AutoJudg
     public void updateStatusLabel(final String bigMessage) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
-                bigAutoJudgeStatusLabel.setText(bigMessage);
+                if(showBigLabel) {
+                    bigAutoJudgeStatusLabel.setText(bigMessage);
+                }
                 bigAutoJudgeStatusLabel.setToolTipText(bigMessage);
             }
         });
     }
 
+    /**
+     * Returns client name (eg. judge1) associated with this status window. Currently used to
+     * select which bg image to display
+     * @param name the client name to set
+     */
+    public void setClientName(String name) {
+        clientName = name;
+        getCenterPane().setImageFromKey(clientName);
+        getCenterPane().resizeParentToFit(this);
+    }
+    
+    /**
+     * Gets current client name for this frame
+     * @return the client name
+     */
+    public String getClientName() {
+        return clientName;
+    }
     public void setAutoJudgeMonitor(AutoJudgingMonitor monitor) {
         autoJudgingMonitor = monitor;
     }

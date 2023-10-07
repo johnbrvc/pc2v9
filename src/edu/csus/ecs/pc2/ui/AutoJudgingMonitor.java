@@ -159,6 +159,7 @@ public class AutoJudgingMonitor implements UIPlugin {
         if (usingGui) {
             SwingUtilities.invokeLater(new Runnable() {
                 public void run() {
+                    autoJudgeStatusFrame.setClientName(contest.getClientId().getName());
                     autoJudgeStatusFrame.setTitle("Auto Judge Status " + contest.getClientId().getName());
                 }
             });
