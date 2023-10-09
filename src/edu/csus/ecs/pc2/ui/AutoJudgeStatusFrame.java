@@ -232,7 +232,7 @@ public class AutoJudgeStatusFrame extends javax.swing.JFrame implements AutoJudg
     }
 
     /**
-     * Returns client name (eg. judge1) associated with this status window. Currently used to
+     * Sets client name (eg. judge1) associated with this status window. Currently used to
      * select which bg image to display
      * @param name the client name to set
      */

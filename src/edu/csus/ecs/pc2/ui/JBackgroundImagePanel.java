@@ -1,6 +1,9 @@
 // Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.ui;
 
+import edu.csus.ecs.pc2.core.log.Log;
+import edu.csus.ecs.pc2.core.log.StaticLog;
+
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -63,11 +66,9 @@ public class JBackgroundImagePanel extends JPanel {
                 profileFileName = fileName;
                 setImageFromKey(DEFAULT_IMAGEFILE_KEY);
             }                   
-        } catch (Exception e)
-        {
+        } catch (Exception e) {
             // Can't load bg properties, just log a message
-            System.err.println("Can not load AJ background properties file " + fileName);
-            e.printStackTrace();
+            StaticLog.getLog().log(Log.INFO, "Error loading BG properties from " + fileName + " in setPropertiesFileName()", e);
         }
         
     }
@@ -94,8 +95,7 @@ public class JBackgroundImagePanel extends JPanel {
                     result = true;
                     repaint();
                 } catch(IOException e) {
-                    System.err.println("Error loading image for key " + key);
-                    e.printStackTrace();
+                    StaticLog.getLog().log(Log.INFO, "Error loading image for key " + key + " in setImageFromKey()", e);
                 }
             }
         }
@@ -115,17 +115,23 @@ public class JBackgroundImagePanel extends JPanel {
             Dimension screenDims = Toolkit.getDefaultToolkit().getScreenSize();
             
 //            System.err.println("image wid=" + nw + " ht=" + nh + " fr wid=" + fw + " ht=" + fh);
+            // get aspect ratio of the image
             double ar = nw / nh;
+            // if the wid < height, it's portrait mode (cell phone picture?)
             if(ar < 1.0) {
-                //Image is portrait
+                //Image is portrait - calculate new frame height using image ar
                 fh = fw / ar;
+                //if too big to fit on screen, adjust to max, then re-calc the frame width
+                //based on the new height
                 if(fh > screenDims.getHeight()) {
                     fh = screenDims.getHeight();
                     fw = ar * fh;
                 }
             } else {
-                //Image is landscape
+                //Image is landscape - calculate new frame width using image ar
                 fw = ar * fh;
+                //if too big to fit on the screen, adjust to max, then re-calc the frame height
+                //basedon the new width
                 if(fw > screenDims.getWidth()) {
                     fw = screenDims.getWidth();
                     fh = fw / ar;
