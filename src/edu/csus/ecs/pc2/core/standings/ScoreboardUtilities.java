@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2023 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2024 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.core.standings;
 
 import java.io.File;
@@ -30,6 +30,7 @@ import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import edu.csus.ecs.pc2.core.Utilities;
 import edu.csus.ecs.pc2.core.exception.IllegalContestState;
 import edu.csus.ecs.pc2.core.log.StaticLog;
+import edu.csus.ecs.pc2.core.model.Account;
 import edu.csus.ecs.pc2.core.model.ClientId;
 import edu.csus.ecs.pc2.core.model.ClientType;
 import edu.csus.ecs.pc2.core.model.ElementId;
@@ -40,7 +41,7 @@ import edu.csus.ecs.pc2.core.model.Run;
 import edu.csus.ecs.pc2.core.scoring.DefaultScoringAlgorithm;
 import edu.csus.ecs.pc2.core.standings.json.ScoreboardJsonModel;
 
-public class ScoreboardUtilites {
+public class ScoreboardUtilities {
 
     /**
      * Create x from XML StringContestStandings
@@ -88,7 +89,7 @@ public class ScoreboardUtilites {
     }
     
     public static ContestStandings createContestStandings(IInternalContest contest) throws JAXBException, IllegalContestState, JsonParseException, JsonMappingException, IOException {
-        String xmlString = ScoreboardUtilites.createScoreboardXML(contest);
+        String xmlString = ScoreboardUtilities.createScoreboardXML(contest);
         return createContestStandings(xmlString);
     }
     
@@ -286,7 +287,7 @@ public class ScoreboardUtilites {
     /**
      * Return division number from groupName
      * @param groupName
-     * @return null if no division nubmer found, else the division number
+     * @return null if no division number found, else the division number
      */
     // TODO REFACTOR i689 redesign how divisions are identified. 
     public static String getDivision(String groupName) {
@@ -299,6 +300,23 @@ public class ScoreboardUtilites {
             }
         }
         return null;
+    }
+
+    /**
+     * Return Group for input clientId.
+     * 
+     * @param contest
+     * @param submitter
+     * @return null if no group, else the Group
+     */
+    public static Group getGroup(IInternalContest contest, Account submitter) {
+        
+        ElementId groupId = submitter.getGroupId();
+        if (groupId == null) {
+            return null;
+        }
+        
+        return(contest.getGroup(groupId));
     }
 
 }

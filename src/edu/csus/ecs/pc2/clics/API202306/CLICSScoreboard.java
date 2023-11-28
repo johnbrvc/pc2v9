@@ -8,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Properties;
+
 import javax.xml.bind.JAXBException;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -17,11 +18,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.csus.ecs.pc2.core.IInternalController;
 import edu.csus.ecs.pc2.core.exception.IllegalContestState;
 import edu.csus.ecs.pc2.core.log.StaticLog;
+import edu.csus.ecs.pc2.core.model.Group;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
 import edu.csus.ecs.pc2.core.model.Problem;
 import edu.csus.ecs.pc2.core.scoring.DefaultScoringAlgorithm;
 import edu.csus.ecs.pc2.core.standings.ContestStandings;
-import edu.csus.ecs.pc2.core.standings.ScoreboardUtilites;
+import edu.csus.ecs.pc2.core.standings.ScoreboardUtilities;
 import edu.csus.ecs.pc2.core.standings.TeamStanding;
 import edu.csus.ecs.pc2.services.core.JSONUtilities;
 
@@ -51,15 +53,16 @@ public class CLICSScoreboard {
      * Fill in the scoreboard information
      * 
      */
-    public CLICSScoreboard(IInternalContest model, IInternalController controller)  throws IllegalContestState, JAXBException, IOException {
+    public CLICSScoreboard(IInternalContest model, IInternalController controller, Group group)  throws IllegalContestState, JAXBException, IOException {
         
         DefaultScoringAlgorithm scoringAlgorithm = new DefaultScoringAlgorithm();
 
-        Properties properties = ScoreboardUtilites.getScoringProperties(model);
+        Properties properties = ScoreboardUtilities.getScoringProperties(model);
 
         // legacy - standings are created as XML, and we convert that to JSON. 
-        String xml = scoringAlgorithm.getStandings(model, properties, StaticLog.getLog());
-        ContestStandings contestStandings = ScoreboardUtilites.createContestStandings(xml);
+        String xml = scoringAlgorithm.getStandings(model, null, null, group, properties, StaticLog.getLog());
+        
+        ContestStandings contestStandings = ScoreboardUtilities.createContestStandings(xml);
         
         // This is what we want to return:
         //        {

@@ -21,10 +21,13 @@ import javax.ws.rs.ext.Provider;
 import javax.xml.bind.JAXBException;
 
 import edu.csus.ecs.pc2.core.IInternalController;
+import edu.csus.ecs.pc2.core.StringUtilities;
 import edu.csus.ecs.pc2.core.exception.IllegalContestState;
 import edu.csus.ecs.pc2.core.log.Log;
 import edu.csus.ecs.pc2.core.model.ContestTime;
+import edu.csus.ecs.pc2.core.model.Group;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
+import edu.csus.ecs.pc2.core.util.JSONTool;
 import edu.csus.ecs.pc2.services.core.JSONUtilities;
 import edu.csus.ecs.pc2.services.eventFeed.WebServer;
 /**
@@ -70,9 +73,24 @@ public class ScoreboardService implements Feature {
                   sc.isUserInRole(WebServer.WEBAPI_ROLE_ANALYST) ||
                   sc.isUserInRole(WebServer.WEBAPI_ROLE_JUDGE)))) {
                 
+                Group specificGroup = null;
+                
+                // if a specific group was requested, let's look for that so we can pass it to the standings routine
+                if(!StringUtilities.isEmpty(group_id)) {
+                    for(Group group: model.getGroups()) {
+                        if (group.isDisplayOnScoreboard() && JSONTool.getGroupId(group).equals(group_id)) {
+                            specificGroup = group;
+                            break;
+                        }
+                    }
+                    if(specificGroup == null) {
+                        return Response.status(Response.Status.NOT_FOUND).build(); 
+                    }
+                }
+                
                 // ok to return scoreboard
                 try {
-                    CLICSScoreboard scoreboard = new CLICSScoreboard(model, controller);                    
+                    CLICSScoreboard scoreboard = new CLICSScoreboard(model, controller, specificGroup);                    
                     return Response.ok(scoreboard.toJSON(), MediaType.APPLICATION_JSON).build();
                 } catch (IllegalContestState | JAXBException | IOException e) {
                     controller.getLog().log(Log.WARNING, "Exception creating PC2 scoreboard JSON: " + e.getMessage(), e);

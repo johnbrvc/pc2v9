@@ -5,6 +5,7 @@ import java.util.Properties;
 
 import edu.csus.ecs.pc2.core.exception.IllegalContestState;
 import edu.csus.ecs.pc2.core.log.Log;
+import edu.csus.ecs.pc2.core.model.Group;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
 import edu.csus.ecs.pc2.core.model.Run;
 
@@ -41,5 +42,5 @@ public interface IScoringAlgorithm {
      * @return An XML descriptor giving standings properties for each team
      * @throws IllegalContestState
      */
-    String getStandings(IInternalContest theContest, Run[] runs, Integer divisionNumber, Properties properties, Log inputLog) throws IllegalContestState;
+    String getStandings(IInternalContest theContest, Run[] runs, Integer divisionNumber, Group group, Properties properties, Log inputLog) throws IllegalContestState;
 }

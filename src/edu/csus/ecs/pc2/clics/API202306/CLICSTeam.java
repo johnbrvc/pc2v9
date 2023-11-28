@@ -1,8 +1,13 @@
 // Copyright (C) 1989-2024 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.clics.API202306;
 
+import java.io.File;
+import java.io.IOException;
+
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.csus.ecs.pc2.core.model.Account;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
@@ -47,6 +52,13 @@ public class CLICSTeam {
     // location, photo, video, backup, key_log, tool_data, desktop, webcam, audio
     
     /**
+     * Default constructor needed for jackson deserialization.
+     */
+    public CLICSTeam() {
+        
+    }
+    
+    /**
      * Fill in properties for team as per 2023-06 spec
      * 
      * @param model The contest
@@ -80,5 +92,20 @@ public class CLICSTeam {
         } catch (Exception e) {
             return "Error creating JSON for team info " + e.getMessage();
         }
+    }
+    
+    public static CLICSTeam [] fromJSON(String file) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            CLICSTeam [] teams = mapper.readValue(new File(file), CLICSTeam[].class);
+            return(teams);
+        } catch (JsonGenerationException e) {
+            e.printStackTrace();
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }        
+        return(null);
     }
 }

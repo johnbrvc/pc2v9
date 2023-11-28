@@ -45,7 +45,7 @@ import edu.csus.ecs.pc2.core.model.Run.RunStates;
 import edu.csus.ecs.pc2.core.security.Permission;
 import edu.csus.ecs.pc2.core.security.PermissionList;
 import edu.csus.ecs.pc2.core.security.Permission.Type;
-import edu.csus.ecs.pc2.core.standings.ScoreboardUtilites;
+import edu.csus.ecs.pc2.core.standings.ScoreboardUtilities;
 import edu.csus.ecs.pc2.core.util.IMemento;
 import edu.csus.ecs.pc2.core.util.XMLMemento;
 import edu.csus.ecs.pc2.util.ScoreboardVariableReplacer;
@@ -289,7 +289,7 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
     
     @Override
     public String getStandings(IInternalContest theContest, Properties properties, Log inputLog) throws IllegalContestState {
-           return getStandings(theContest, null, null, properties, inputLog);
+           return getStandings(theContest, null, null, null, properties, inputLog);
     }
     
     /*
@@ -298,7 +298,7 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
      * @see edu.csus.ecs.pc2.core.scoring.ScoringAlgorithm#getStandings(edu.csus.ecs.pc2.core.Run[], edu.csus.ecs.pc2.core.AccountList, edu.csus.ecs.pc2.core.ProblemDisplayList, java.util.Properties)
      */
     @Override
-    public String getStandings(IInternalContest theContest, Run[] runs, Integer divisionNumber, Properties properties, Log inputLog) throws IllegalContestState {
+    public String getStandings(IInternalContest theContest, Run[] runs, Integer divisionNumber, Group group, Properties properties, Log inputLog) throws IllegalContestState {
         if (theContest == null) {
             throw new InvalidParameterException("Invalid model (null)");
         }
@@ -405,7 +405,7 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
                 }
             }
             
-           initializeStandingsRecordHash (theContest, accountList, accounts, problems, standingsRecordHash, divisionNumber);
+           initializeStandingsRecordHash (theContest, accountList, accounts, problems, standingsRecordHash, group);
             
             for (int i = 0; i < runs.length; i++) {
                 // skip runs that are deleted and
@@ -1017,21 +1017,21 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
      * @param standingsRecordHash
      * @param divisionNumber 
      */
-    private void initializeStandingsRecordHash(IInternalContest theContest, AccountList accountList, Account[] accounts, Problem[] problems, Hashtable<String, StandingsRecord> standingsRecordHash, Integer divisionNumber) {
+    private void initializeStandingsRecordHash(IInternalContest theContest, AccountList accountList, Account[] accounts, Problem[] problems, Hashtable<String, StandingsRecord> standingsRecordHash, Group group) {
 
         for (int i = 0; i < accountList.size(); i++) {
             Account account = accounts[i];
+            // see if we only want a specific group
+            if (group != null) {
+                if(ScoreboardUtilities.getGroup(theContest, account) != group) {
+                    /**
+                     * If this account is NOT in the same group as desired then do not add StandingsRecord, skip to next account.
+                     */
+                    continue;
+                }
+            }
             if (account.getClientId().getClientType() == ClientType.Type.TEAM && account.isAllowed(Permission.Type.DISPLAY_ON_SCOREBOARD)) {
                 
-                if (divisionNumber != null) {
-                    String div = ScoreboardUtilites.getDivision(theContest, account.getClientId());
-                    if (!divisionNumber.toString().trim().equals(div.trim())) {
-                        /**
-                         * If this account is NOT in the same division as divisionNumber then do not add StandingsRecord, skip to next account.
-                         */
-                        continue;
-                    }
-                }
                 StandingsRecord standingsRecord = new StandingsRecord();
                 SummaryRow summaryRow = standingsRecord.getSummaryRow();
                 // populate summaryRow with problems

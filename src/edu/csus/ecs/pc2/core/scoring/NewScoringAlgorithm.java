@@ -32,7 +32,7 @@ import edu.csus.ecs.pc2.core.model.RunUtilities;
 import edu.csus.ecs.pc2.core.model.Site;
 import edu.csus.ecs.pc2.core.security.Permission;
 import edu.csus.ecs.pc2.core.security.PermissionList;
-import edu.csus.ecs.pc2.core.standings.ScoreboardUtilites;
+import edu.csus.ecs.pc2.core.standings.ScoreboardUtilities;
 import edu.csus.ecs.pc2.core.util.IMemento;
 import edu.csus.ecs.pc2.core.util.XMLMemento;
 import edu.csus.ecs.pc2.util.ScoreboardVariableReplacer;
@@ -172,7 +172,7 @@ public class NewScoringAlgorithm extends Plugin implements INewScoringAlgorithm 
         for(Account av : allAccountVector) {
             if(av.isAllowed(Permission.Type.DISPLAY_ON_SCOREBOARD)) {
                 if (divisionNumber != null) {
-                    String div = ScoreboardUtilites.getDivision(contest, av.getClientId());
+                    String div = ScoreboardUtilities.getDivision(contest, av.getClientId());
                     if (! divisionNumber.toString().trim().equals(div.trim())){
                         /**
                          * If this account is NOT in the same division as the divisionNumber, then do not account to list of accounts on scoreboard, skip to next account.
@@ -266,13 +266,13 @@ public class NewScoringAlgorithm extends Plugin implements INewScoringAlgorithm 
     
     @Override
     public String getStandings(IInternalContest contest, Properties properties, Log inputLog) throws IllegalContestState {
-        return getStandings(contest, null, null, properties, inputLog);
+        return getStandings(contest, null, null, null, properties, inputLog);
     }
     
     @Override
     // TODO SA SOMEDAY Move this to a SA Utility Class
     // returns XML String for standings.
-    public String getStandings(IInternalContest contest, Run[] runs, Integer divisionNumber, Properties properties, Log inputLog) throws IllegalContestState {
+    public String getStandings(IInternalContest contest, Run[] runs, Integer divisionNumber, Group group, Properties properties, Log inputLog) throws IllegalContestState {
 
         StandingsRecord[] standings = getStandingsRecords(contest, divisionNumber, properties);
 
