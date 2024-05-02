@@ -24,6 +24,8 @@ import javax.xml.bind.DatatypeConverter;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import edu.csus.ecs.pc2.clics.CLICSJudgementType;
+import edu.csus.ecs.pc2.clics.CLICSJudgementType.CLICS_JUDGEMENT_ACRONYM;
 import edu.csus.ecs.pc2.core.IInternalController;
 import edu.csus.ecs.pc2.core.Utilities;
 import edu.csus.ecs.pc2.core.log.Log;
@@ -31,6 +33,11 @@ import edu.csus.ecs.pc2.core.model.ClientId;
 import edu.csus.ecs.pc2.core.model.ClientType;
 import edu.csus.ecs.pc2.core.model.ClientType.Type;
 import edu.csus.ecs.pc2.core.model.IFile;
+import edu.csus.ecs.pc2.core.model.IInternalContest;
+import edu.csus.ecs.pc2.core.model.Judgement;
+import edu.csus.ecs.pc2.core.model.JudgementRecord;
+import edu.csus.ecs.pc2.core.model.Run;
+import edu.csus.ecs.pc2.core.model.RunResultFiles;
 import edu.csus.ecs.pc2.core.model.RunUtilities;
 import edu.csus.ecs.pc2.ui.MessageManager;
 import edu.csus.ecs.pc2.ui.MessageRecord;
@@ -52,7 +59,7 @@ import edu.csus.ecs.pc2.ui.ShadowCompareRunsPane;
  */
 public class RemoteEventFeedMonitor implements Runnable {
 
-    public static final int REMOTE_EVENT_FEED_DELAYMS = 0;
+    public static final int REMOTE_EVENT_FEED_DELAYMS = 500;
     public static final int RECONNECT_RETRY_DELAY = 5000;
     public static final boolean ATTEMPT_RECONNECTS = true;
     public static final boolean ALLOW_PRESTART_ACTIVITY = false;
@@ -108,6 +115,8 @@ public class RemoteEventFeedMonitor implements Runnable {
     private int retryConnectDelay = RECONNECT_RETRY_DELAY;
     private boolean attemptConnectRetries = ATTEMPT_RECONNECTS;
     private int tossedMessages = 0;
+    
+    private int numRunsUpdated = 0;
 
     // Should we allow submissions/judgements from remote prior to contest start
     private boolean allowPrestartActivity = ALLOW_PRESTART_ACTIVITY;
@@ -534,7 +543,7 @@ public class RemoteEventFeedMonitor implements Runnable {
                                                     + " submissionID " + overrideSubmissionID);
                                                 try {
                                                     submitter.submitRun(runSubmission.getTeam_id(), runSubmission.getProblem_id(), runSubmission.getLanguage_id(),
-                                                            runSubmission.getEntry_point(), mainFile, auxFiles, overrideTimeMS, overrideSubmissionID);
+                                                            runSubmission.getEntry_point(), mainFile, auxFiles, overrideTimeMS, -overrideSubmissionID);
                                                 } catch (Exception e) {
 
                                                     // Send message, message will add to connectStatusTable
@@ -600,8 +609,14 @@ public class RemoteEventFeedMonitor implements Runnable {
                                                                " for submission " + submissionID + " due to filter");
                                                         event = reader.readLine();
                                                         continue;
-                                                    }
-
+                                                   }
+                                                   
+                                                   if (updateRun(submissionID, judgement)) {
+                                                       numRunsUpdated++;
+                                                   }
+                                                   logAndDebugPrint(log, Level.INFO, "Updated judgement for submission " + submissionID + " to " + judgement);
+                                                   // Modify judgement as if we resolved it.
+                                                   
                                                        //TODO: make sure this is a judgement for a submission we know about.
                                                        //  Question: isn't it possible the remote system will send us a "judgement" before it sends us
                                                        //  the "submission" associated with that judgement?  It seems that this is both allowed by the CLICS
@@ -611,9 +626,9 @@ public class RemoteEventFeedMonitor implements Runnable {
                                                     // this (appears to be) a judgement we want; save it in the global judgements map under a key of
                                                     // the judgement ID with value "submissionID:judgement"
     //                                                System.out.println ("Adding judgement " + judgementID + " for submission " + submissionID + " with judgement " + judgement + " to RemoteJudgements Map");
-                                                    synchronized (remoteJudgementsMapLock) {
-                                                        getRemoteJudgementsMap().put(judgementID, submissionID + ":" + judgement);
-                                                    }
+//                                                    synchronized (remoteJudgementsMapLock) {
+//                                                        getRemoteJudgementsMap().put(judgementID, submissionID + ":" + judgement);
+//                                                    }
                                                 }
                                             }
 
@@ -1217,6 +1232,89 @@ public class RemoteEventFeedMonitor implements Runnable {
       */
      public void stop() {
          keepRunning = false;
+     }
+
+     /**
+      * Invokes the PC2 server to update the status of the specified run to match the specified judgement.
+      * 
+      * @param submissionIdStr the Id of the run to be updated.
+      * @param newJudgementStr the judgement which should be applied to the specified run.
+      * 
+      * @return true if the run was successfully updated; false if the run could not be updated for some reason 
+      */
+     protected boolean updateRun(String submissionIdStr, String newJudgementStr) {
+         int submissionId;
+         
+         Log log = pc2Controller.getLog();
+         log.log(Log.INFO, "Updating run " + submissionIdStr + " to '" + newJudgementStr + "'");
+         
+         //verify the remote judgement is a valid value
+         CLICS_JUDGEMENT_ACRONYM judgementAcronym;
+         if (!CLICSJudgementType.isCLICSAcronym(newJudgementStr)) {
+             log.log(Log.INFO, "Supplied judgement of " + newJudgementStr + " from remote is not a valid CLICS judgement type");
+             return(false);
+         }
+         //get the CLICS acronym for the specified judgement 
+         CLICS_JUDGEMENT_ACRONYM newJudgement = CLICSJudgementType.getCLICSAcronymFromElementName(newJudgementStr);
+         try {
+             submissionId = Integer.parseInt(submissionIdStr);
+         } catch(Exception e) {
+             log.log(Log.WARNING, "Supplied submission Id " + submissionIdStr + " is not a valid number");
+             return(false);
+         }
+         
+         IInternalContest contest = pc2Controller.getContest();
+         //get all the runs
+         Run [] allRuns = contest.getRuns();
+         
+         //search for the desired run by Id
+         boolean found = false ;
+         Run targetRun = null;
+         for (Run run : allRuns) {
+             if (run.getNumber()==submissionId) {
+                 targetRun = run;
+                 found = true;
+                 break;
+             }
+         }
+         
+         //if we didn't find the run, return failure
+         if (!found) {
+             log.log (Log.WARNING, "Failed to find run to be updated: submission " + submissionId + " not found in run list.");
+             return false;
+         }
+         
+         //if we get here we've found the run to be updated;
+         //try to find a PC2 Judgement that matches the remote CCS's CLICS judgement
+         Judgement [] judgementsArray = contest.getJudgements();
+         for (Judgement judgement : judgementsArray) {
+             
+             if (newJudgement.name().contentEquals(judgement.getAcronym())) {
+                 
+                 //we found a matching PC2 judgement; check if the new judgement is a "yes"
+                 boolean solved = CLICSJudgementType.isYesAcronym(newJudgement);
+                 
+                 //build a new JudgementRecord for PC2 containing the desired judgement values
+                 JudgementRecord judgementRecord = new JudgementRecord(judgement.getElementId(), contest.getClientId(), solved, false);
+
+                 //duplicate the existing RunResultFiles, with null executionData (since we haven't actually re-executed the run)
+                 RunResultFiles runResultFiles = new RunResultFiles(targetRun, targetRun.getProblemId(), judgementRecord, null);
+                 
+                 log.log(Log.INFO, "Sending new JudgementRecord to PC2 server for submissionId " + submissionId + ": "
+                         + " judgementId=" + judgementRecord.getJudgementId()
+                         + " elementId=" + judgementRecord.getElementId()
+                         + " isSolved=" + judgementRecord.isSolved()
+                         + " for run " + targetRun);
+                 
+                 //update the run in PC2
+                 judgementRecord.setSendToTeam(false);
+                 pc2Controller.submitRunJudgement(targetRun, judgementRecord, runResultFiles);
+//                 pc2Controller.updateRun(targetRun, judgementRecord, runResultFiles);
+                 return(true);
+             }
+         }
+         return false;
+         
      }
 
 }

@@ -4839,6 +4839,12 @@ public class InternalController implements IInternalController, ITwoToOne, IBtoA
         run.setEntryPoint(entry_point);
         RunFiles runFiles = new RunFiles(run, mainSubmissionFile, additionalFiles);
 
+        // If using remote's judgement as authoritative, put run in HOLD state
+        if(overrideSubmissionId < 0) {
+            overrideSubmissionId = -overrideSubmissionId;
+            // Waiting for remote judgement
+            run.setStatus(RunStates.BEING_JUDGED);
+        }
         Packet packet = PacketFactory.createSubmittedRun(contest.getClientId(), serverClientId, run, runFiles, overrideTimeMS, overrideSubmissionId);
         sendToLocalServer(packet);
 
