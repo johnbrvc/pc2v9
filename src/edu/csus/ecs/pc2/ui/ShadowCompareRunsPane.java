@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javax.swing.Box;
+//import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -64,6 +65,7 @@ import edu.csus.ecs.pc2.core.model.RunEvent;
 import edu.csus.ecs.pc2.core.model.RunResultFiles;
 import edu.csus.ecs.pc2.core.security.Permission;
 import edu.csus.ecs.pc2.shadow.ShadowController;
+import edu.csus.ecs.pc2.shadow.ShadowController.FILTERS;
 import edu.csus.ecs.pc2.shadow.ShadowJudgementInfo;
 import edu.csus.ecs.pc2.shadow.ShadowJudgementPair;
 
@@ -153,6 +155,8 @@ public class ShadowCompareRunsPane extends JPanePlugin {
 
         this.add(getSummaryPanel());
         
+        this.add(getdynamicallyRefreshPanel());
+        
         this.add(getButtonPanel());
     }
         
@@ -237,7 +241,7 @@ public class ShadowCompareRunsPane extends JPanePlugin {
         
         //get the current judgement information from the shadow controller
         currentJudgementMap = shadowController.getJudgementComparisonInfo();
-
+        currentJudgementMap = shadowController.filterJudgmenentMap(currentJudgementMap);
         //define the columns for the table
         String[] columnNames = { "Team", "Problem", "Language", "Submission ID", "PC2 Shadow", "Remote CCS", "Match?", "Overridden?" };
         
@@ -340,15 +344,16 @@ public class ShadowCompareRunsPane extends JPanePlugin {
     }
     
     /**
-     * Initialized dynamically refresh panel that contains checkbox,textfield and label for auto refreshing.
+     * Initialized dynamically refresh panel that contains checkbox, textfield and label for auto refreshing.
      * @return
      */
     private JPanel getdynamicallyRefreshPanel() {
         
         if (dynamicallyRefreshPanel == null) {
             dynamicallyRefreshPanel = new JPanel();
+            dynamicallyRefreshPanel.setMaximumSize(new Dimension(700,20));
             
-            JCheckBox checkbox = new JCheckBox("Automatically Refresh Every:");
+            JCheckBox checkbox = new JCheckBox("Refresh Every:");
             dynamicallyRefreshPanel.add(checkbox);
             
             
@@ -370,6 +375,7 @@ public class ShadowCompareRunsPane extends JPanePlugin {
                             Toolkit.getDefaultToolkit().beep();
                         }
                     } catch (NumberFormatException e) {
+                        //catch if user tries to enter non numeric chars.
                         Toolkit.getDefaultToolkit().beep();
                     }
                     
@@ -386,31 +392,30 @@ public class ShadowCompareRunsPane extends JPanePlugin {
                     
                     if (e.getStateChange() == ItemEvent.SELECTED) {
                         if (textField.getText().isEmpty()) {
-                            JOptionPane.showMessageDialog(null, "Please enter a value to textField", "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(null, "Please specify the number of seconds between refreshes (1-60)", "Error", JOptionPane.ERROR_MESSAGE);
                             return;
                         }
-                        int time;
+                        int duration;
                         try {
-                            time = Integer.parseInt(textField.getText());
-                            if (time < 1) {
-                                log.log(Log.WARNING, "dynamicallyRefreshPanel received time less than 1"+ textField.getText());
-                                throw new IllegalArgumentException("Time value cannot be less than 1, time is : " + time);
+                            duration = Integer.parseInt(textField.getText());
+                            if (duration < 1) {
+                                log.log(Log.WARNING, "dynamicallyRefreshPanel received duration less than 1. It received: "+ textField.getText());
+                                throw new IllegalArgumentException("Duration value cannot be less than 1, time is : " + duration);
                             }
-                            if (time > 60) {
-                                log.log(Log.WARNING, "dynamicallyRefreshPanel received time more than 60"+ textField.getText());
-                                throw new IllegalArgumentException("Time value cannot be more than 60, time is:  " + time);
+                            if (duration > 60) {
+                                log.log(Log.WARNING, "dynamicallyRefreshPanel received duration more than 60. It received: "+ textField.getText());
+                                throw new IllegalArgumentException("Duration value cannot be more than 60, time is: " + duration);
                             }
                         } catch (NumberFormatException a) {
-                            // Handle the case where the text cannot be parsed as an integer
-                            log.log(Log.WARNING, "dynamicallyRefreshPanel did not receive an integer for time. It received"+ textField.getText());
-                            throw new NumberFormatException("dynamicallyRefreshPanel did not receive an integer for time. It received: " + textField.getText());
+                            log.log(Log.WARNING, "dynamicallyRefreshPanel did not receive an integer for duration. It received: "+ textField.getText());
+                            throw new NumberFormatException("dynamicallyRefreshPanel did not receive an integer for duration. It received: " + textField.getText());
                         }
                         SwingUtilities.invokeLater(new Runnable() {
                             public void run() {
                                 refreshResultsTable();
                             }
                         });
-                        timer = new Timer(time * 1000, new ActionListener() {
+                        timer = new Timer(duration * 1000, new ActionListener() {
                             @Override
                             public void actionPerformed(ActionEvent e) {
                                 
@@ -423,7 +428,7 @@ public class ShadowCompareRunsPane extends JPanePlugin {
                             }
                         });
                         textField.setEnabled(false);
-                        log.log(Log.INFO, "Shadow table will be dynamically refreshed every " + time + " seconds.");  
+                        log.log(Log.INFO, "Shadow table will be dynamically refreshed every " + duration + " seconds.");  
                         timer.start();
                     } 
                     else {
@@ -437,6 +442,24 @@ public class ShadowCompareRunsPane extends JPanePlugin {
             JLabel label = new JLabel("seconds");
             dynamicallyRefreshPanel.add(label);
             
+            Component horizontalStrut2 = Box.createHorizontalStrut(40);
+            dynamicallyRefreshPanel.add(horizontalStrut2);
+            
+            JCheckBox missMatchCheckBox = new JCheckBox("Only Missmatched");
+            missMatchCheckBox.setToolTipText("When toggled, table will only display when pc2 and remote ccs' judgements do not match");
+            
+            missMatchCheckBox.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    if (e.getStateChange() == ItemEvent.SELECTED) {
+                        shadowController.setFilter(FILTERS.ONLY_MISSMATCH);
+                    }
+                    else {
+                        shadowController.setFilter(FILTERS.NONE);
+                    }
+                }
+            });
+            dynamicallyRefreshPanel.add(missMatchCheckBox);
         }
         return dynamicallyRefreshPanel;
     }
@@ -444,9 +467,8 @@ public class ShadowCompareRunsPane extends JPanePlugin {
     private JComponent getButtonPanel() {
         
         JPanel buttonPanel = new JPanel();
-        buttonPanel.setMaximumSize(new Dimension(1000,40));
+        buttonPanel.setMaximumSize(new Dimension(700,40));
         
-        buttonPanel.add(getdynamicallyRefreshPanel());
         
         JButton refreshButton = new JButton("Refresh");
         refreshButton.addActionListener(new ActionListener() {
@@ -510,9 +532,8 @@ public class ShadowCompareRunsPane extends JPanePlugin {
         resolveButton.setToolTipText("Updates PC2 so that the PC2 judgement in all selected table rows matches the Remote CCS judgement");
         buttonPanel.add(resolveButton);
         
-        
-       
-        return buttonPanel ;
+                
+        return buttonPanel;
     }
     
     private void refreshResultsTable() {
