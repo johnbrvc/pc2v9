@@ -3022,7 +3022,14 @@ public class Executable extends Plugin implements IExecutable, IExecutableNotify
             }
             newString = replaceString(origString, "{:mainfile}", runFiles.getMainFile().getName());
             newString = replaceString(newString, Constants.CMDSUB_FILES_VARNAME, ExecuteUtilities.getAllSubmittedFilenames(runFiles));
-            newString = replaceString(newString, Constants.CMDSUB_BASENAME_VARNAME, removeExtension(runFiles.getMainFile().getName()));
+            String baseName = removeExtension(runFiles.getMainFile().getName());
+            newString = replaceString(newString, Constants.CMDSUB_BASENAME_VARNAME, baseName);
+            // If first char of the basename is lower case, see if we have to replace
+            // the first char with an upper case char.
+            if(!baseName.isEmpty() && Character.isLowerCase(baseName.charAt(0))) {
+                baseName = Character.toUpperCase(baseName.charAt(0)) + baseName.substring(1);
+                newString = replaceString(newString, Constants.CMDSUB_CAPBASENAME_VARNAME, baseName);
+            }
             newString = replaceString(newString, "{:package}", packageName);
 
             String validatorCommand = null;

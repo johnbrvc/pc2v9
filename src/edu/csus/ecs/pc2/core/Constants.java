@@ -109,6 +109,7 @@ public final class Constants {
      * Command substitution variable for name of thing to execute (basename of source file)
      */
     public static final String CMDSUB_BASENAME_VARNAME = "{:basename}";
+    public static final String CMDSUB_CAPBASENAME_VARNAME = "{:Basename}";
 
     /**
      * Command substitution variable for all files submitted. Note the missing ':' - legacy.
