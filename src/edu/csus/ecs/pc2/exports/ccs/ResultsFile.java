@@ -230,19 +230,16 @@ public class ResultsFile {
             boolean isHighHonor = false;
             boolean isHonor = false;
 
-            if (record.getNumberSolved() > 0) {
-                if (finalizeData.isUseWFGroupRanking()) {
-                    if (record.getNumberSolved() >= highestHonorSolvedCount) {
-                        isHighestHonor = true;
-                    } else if (record.getNumberSolved() >= highHonorSolvedCount) {
-                        isHighHonor = true;
-                    } else if (record.getNumberSolved() >= median) {
-                        isHonor = true;
-                    }
-                }
-                else if (record.getNumberSolved() >= median) {
+            if (finalizeData.isUseWFGroupRanking()) {
+                if (record.getNumberSolved() >= highestHonorSolvedCount) {
+                    isHighestHonor = true;
+                } else if (record.getNumberSolved() >= highHonorSolvedCount) {
+                    isHighHonor = true;
+                } else if (record.getNumberSolved() >= median) {
                     isHonor = true;
                 }
+            } else if (record.getNumberSolved() >= median) {
+                isHonor = true;
             }
 
             String award = getMedalCitation(record.getRankNumber(), finalizeData, isHighestHonor, isHighHonor, isHonor);
