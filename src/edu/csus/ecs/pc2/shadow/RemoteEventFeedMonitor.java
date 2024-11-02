@@ -119,6 +119,8 @@ public class RemoteEventFeedMonitor implements Runnable {
 
     private int numRunsUpdated = 0;
 
+    private int numRunsUpdated = 0;
+
     // Should we allow submissions/judgements from remote prior to contest start
     private boolean allowPrestartActivity = ALLOW_PRESTART_ACTIVITY;
 
