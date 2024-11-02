@@ -4839,7 +4839,8 @@ public class InternalController implements IInternalController, ITwoToOne, IBtoA
         run.setEntryPoint(entry_point);
         RunFiles runFiles = new RunFiles(run, mainSubmissionFile, additionalFiles);
 
-        // If using remote's judgement as authoritative, put run in HOLD state
+        // If using remote's judgment as authoritative, put run in BEING_JUDGED state
+        // We will wait for the judgment from the remote.
         if(overrideSubmissionId < 0) {
             overrideSubmissionId = -overrideSubmissionId;
             // Waiting for remote judgement

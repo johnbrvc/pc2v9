@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2019 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2024 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.shadow;
 
 import java.security.InvalidParameterException;
@@ -16,13 +16,13 @@ import edu.csus.ecs.pc2.core.model.Problem;
 import edu.csus.ecs.pc2.core.model.SerializedFile;
 
 /**
- * This class is used to submit runs, obtained from a remote CCS being shadowed by this instance of PC2, 
+ * This class is used to submit runs, obtained from a remote CCS being shadowed by this instance of PC2,
  * to the local PC2 server.
- * 
+ *
  * The class is instantiated with a PC2 Controller ({@link IInternalController}) which it uses to submit
  * the run to the local server.
- * 
- * 
+ *
+ *
  * @author pc2@ecs.csus.edu
  *
  */
@@ -42,30 +42,31 @@ public class RemoteRunSubmitter {
 
     /**
      * Submit a run to the server.
-     * 
+     *
      * @param clientIdString - "teamN" client name
      * @param problemID - problem id
      * @param languageID - CLICS language id
      * @param mainFile - main file name
-     * @param auxFiles - other submittted files 
+     * @param auxFiles - other submittted files
      * @param overrideTimeMS - override submission time in MS
      * @param overrideRunId - override run id
      */
     public void submitRun(String clientIdString, String problemID, String languageID, IFile mainFile, List<IFile> auxFiles, long overrideTimeMS, long overrideRunId) {
         submitRun(clientIdString, problemID, languageID, null, mainFile, auxFiles, overrideTimeMS, overrideRunId);
     }
-    
+
     /**
      * Submit a run to the server.
-     * 
+     *
      * @param clientIdString - "teamN" client name
      * @param problemID - problem id
      * @param languageID - CLICS language id
      * @param entry_point - entry point, null if default or none
      * @param mainFile - main file name
-     * @param auxFiles - other submittted files 
+     * @param auxFiles - other submittted files
      * @param overrideTimeMS - override submission time in MS
-     * @param overrideRunId - override run id
+     * @param overrideRunId - override run id.  If negative, it means the run the remote shadow will provide the judgment and we
+     *                        do not have to execute the run.  Used in "combined" scoreboard mode.
      */
     public void submitRun(String clientIdString, String problemID, String languageID, String entry_point, IFile mainFile, List<IFile> auxFiles, long overrideTimeMS, long overrideRunId) {
 
@@ -78,11 +79,6 @@ public class RemoteRunSubmitter {
         {
             throw new InvalidParameterException("Parameter mainFile is null");
         }
-        
-//        if (overrideRunId <= 0)
-//        {
-//            throw new InvalidParameterException("Parameter overrideRunId has invalid id.  " + overrideRunId + " <= 0");
-//        }
 
         /**
          * Verify input fields
@@ -108,7 +104,7 @@ public class RemoteRunSubmitter {
         if (language == null){
             language = getLanguageByName(contest, languageID);
         }
-        
+
 
         isEmpty(language, "Parameter languageID does not match any pc2 language: '" + languageID + "'");
 
@@ -137,8 +133,8 @@ public class RemoteRunSubmitter {
         }
         return outLang;
     }
-    
-    
+
+
     private Language getLanguageByCLICSID(IInternalContest contest2, String languageName) {
         Language outLang = null;
         Language[] languages = contest.getLanguages();
@@ -149,7 +145,7 @@ public class RemoteRunSubmitter {
         }
         return outLang;
     }
-    
+
     private Problem getProblemByName(IInternalContest contest2, String problemName) {
         Problem outProblem = null;
         Problem[] problems = contest.getProblems();
@@ -163,10 +159,10 @@ public class RemoteRunSubmitter {
 
     /**
      * Return account for input client id.
-     * 
+     *
      * Searches local site's accounts first, then all site's accounts.
      * Will prepend "team" onto client id if client id string not found.
-     * 
+     *
      * @param contest2
      * @param clientIdString
      * @return null if no account found, else the account.

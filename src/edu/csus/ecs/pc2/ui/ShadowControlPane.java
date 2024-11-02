@@ -320,9 +320,10 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
 
         boolean shadowCheckboxEnabled = getShadowSettingsPane().getShadowModeCheckbox().isSelected();
         boolean shadowDataComplete = verifyShadowControls();
+        boolean shadowCombineScoreboards = getShadowSettingsPane().getCombineScoreboardsCheckbox().isSelected();
 
         if (shadowCheckboxEnabled && shadowDataComplete) {
-            shadowController = new ShadowController(this.getContest(), this.getController(), this, lastToken) ;
+            shadowController = new ShadowController(this.getContest(), this.getController(), this, lastToken, shadowCombineScoreboards) ;
             boolean success = shadowController.start();
             if (success) {
                 currentlyShadowing = true;
@@ -509,7 +510,7 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
                 }
             };
             shadowSettingsPane.getShadowModeCheckbox().addActionListener(actionListener);
-
+            shadowSettingsPane.getCombineScoreboardsCheckbox().addActionListener(actionListener);
         }
         return shadowSettingsPane;
     }
@@ -683,6 +684,7 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
         newShadowInfo.setRemoteCCSLogin(contestInformation.getPrimaryCCS_user_login());
         newShadowInfo.setRemoteCCSPassword(contestInformation.getPrimaryCCS_user_pw());
         newShadowInfo.setLastEventID(contestInformation.getLastShadowEventID());
+        newShadowInfo.setCombineScoreboards(getShadowSettingsPane().getCombineScoreboardsCheckbox().isSelected());
         return newShadowInfo;
     }
 
@@ -798,6 +800,7 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
         newShadowInformation.setRemoteCCSLogin(getShadowSettingsPane().getRemoteCCSLoginTextfield().getText());
         newShadowInformation.setRemoteCCSPassword(getShadowSettingsPane().getRemoteCCSPasswdTextfield().getText());
         newShadowInformation.setLastEventID(lastEventTextfield.getText());
+        newShadowInformation.setCombineScoreboards(getShadowSettingsPane().getCombineScoreboardsCheckbox().isSelected());
 
         return (newShadowInformation);
     }
