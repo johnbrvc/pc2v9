@@ -11,6 +11,7 @@ import edu.csus.ecs.pc2.core.DateUtilities;
 import edu.csus.ecs.pc2.core.StringUtilities;
 import edu.csus.ecs.pc2.core.list.AccountList.PasswordType;
 import edu.csus.ecs.pc2.core.list.JudgementNotificationsList;
+import edu.csus.ecs.pc2.core.model.RemoteCCSInformation.RemoteCCSType;
 import edu.csus.ecs.pc2.util.ScoreboardVariableReplacer;
 
 /**
@@ -210,6 +211,11 @@ public class ContestInformation implements Serializable{
     private boolean stopOnFirstFailedtestCase = false;
 
     private String overrideLoadAccountsFilename = null;
+
+    /*
+     * This is for the feeder accounts so we can support multiple remote CCS's
+     */
+    RemoteCCSInformation remoteCCSInfo[] = null;
 
     /**
      * Returns the date/time when the contest is scheduled (intended) to start.
@@ -897,4 +903,24 @@ public class ContestInformation implements Serializable{
         sandboxInteractiveGraceMultiplier = nSecs;
     }
 
+    public void setRemoteCCSInfo(RemoteCCSInformation [] info) {
+        remoteCCSInfo = info;
+    }
+
+    public RemoteCCSInformation getRemoteCCSInfo(String account) {
+        RemoteCCSInformation remoteInfo = null;
+
+        if(remoteCCSInfo != null) {
+            for(RemoteCCSInformation info : remoteCCSInfo) {
+                if(info.getAccountName().equals(account)) {
+                    remoteInfo = info;
+                    break;
+                }
+            }
+        } else {
+            // If no specific one defined for this account, just make one using the defaults (Backward compatiblity)
+            remoteInfo = new RemoteCCSInformation(account, RemoteCCSType.SHADOW, shadowMode, primaryCCS_URL, primaryCCS_user_login, primaryCCS_user_pw);
+        }
+        return(remoteInfo);
+    }
 }

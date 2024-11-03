@@ -59,6 +59,8 @@ import edu.csus.ecs.pc2.core.model.Problem.InputValidationStatus;
 import edu.csus.ecs.pc2.core.model.Problem.SandboxType;
 import edu.csus.ecs.pc2.core.model.Problem.VALIDATOR_TYPE;
 import edu.csus.ecs.pc2.core.model.ProblemDataFiles;
+import edu.csus.ecs.pc2.core.model.RemoteCCSInformation;
+import edu.csus.ecs.pc2.core.model.RemoteCCSInformation.RemoteCCSType;
 import edu.csus.ecs.pc2.core.model.SerializedFile;
 import edu.csus.ecs.pc2.core.model.Site;
 import edu.csus.ecs.pc2.core.scoring.DefaultScoringAlgorithm;
@@ -506,6 +508,9 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
 
         String executeDir = fetchValue(content, EXECUTE_FOLDER, contestInformation.getExecuteFolder());
         contestInformation.setExecuteFolder(executeDir);
+
+        // per-account ccs settings (overrides the above)
+        getRemoteCCSSettings(contestInformation, content);
 
         // save ContesInformation to model
         contest.updateContestInformation(contestInformation);
@@ -1201,6 +1206,60 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
         Account[] fullAccountList = accountVector.toArray(new Account[accountVector.size()]);
         PermissionYamlLoader loader = new PermissionYamlLoader(yamlLines, fullAccountList);
         return loader.getAccountsArray();
+
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean getRemoteCCSSettings(ContestInformation contestInfo, Map<String, Object> yamlContent) {
+
+        Vector<RemoteCCSInformation> ccsVector = new Vector<RemoteCCSInformation>();
+        ArrayList<Map<String, Object>> list = fetchList(yamlContent, REMOTE_CCS_SETTINGS_KEY);
+
+        if (list != null) {
+            for (Object object : list) {
+
+                Map<String, Object> map = (Map<String, Object>) object;
+
+                /**
+                 * <pre>
+                 * remote-ccs-settings:
+                 *
+                 *   - account: feeder1
+                 *     type: shadow
+                 *     enable: true
+                 *     url: https://icpc.displayadmin.com:50443/cgi-bin/GNY2024Real
+                 *     login: pc2
+                 *     password: GNY123
+                 *
+                 *   - account: feeder2
+                 *     type: combinescoreboard
+                 *     enable: true
+                 *     url: https://kattis.com/api/contests/ecna
+                 *     login: pc2
+                 *     password: Abcd1234
+                 * </pre>
+                 */
+                String accountName = fetchValue(map, "account");
+                checkField(accountName, "RemoteCCS account");
+                String feederType = fetchValue(map, "type");
+                checkField(feederType, "RemoteCCS type");
+                RemoteCCSType type = RemoteCCSType.valueOf(feederType.toUpperCase());
+                boolean enabled = fetchBooleanValue(map,  "enable", true);
+                String url = fetchValue(map, "url");
+                checkField(url, "RemoteCCS url");
+                String login = fetchValue(map, "login");
+                checkField(login, "RemoteCCS login");
+                String password = fetchValue(map, "password");
+                checkField(password, "RemoteCCS password");
+
+                ccsVector.add(new RemoteCCSInformation(accountName, type, enabled, url, login, password));
+            }
+        }
+        if(ccsVector.size() > 0) {
+            RemoteCCSInformation [] remoteInfo = ccsVector.toArray(new RemoteCCSInformation[ccsVector.size()]);
+            contestInfo.setRemoteCCSInfo(remoteInfo);
+        }
+        return true;
 
     }
 
