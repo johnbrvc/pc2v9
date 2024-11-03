@@ -906,7 +906,34 @@ public class ContestInformation implements Serializable{
     public void setRemoteCCSInfo(RemoteCCSInformation [] info) {
         remoteCCSInfo = info;
     }
+    public void setRemoteCCSInfo(String accountName, RemoteCCSInformation ccsInfo) {
+        if(remoteCCSInfo != null) {
+            RemoteCCSInformation info;
+            int i, n = remoteCCSInfo.length;
+            for(i = 0; i < n; i++) {
+                info = remoteCCSInfo[i];
+                if(info.getAccountName().equals(accountName)) {
+                    remoteCCSInfo[i] = info;
+                    return;
+                }
+            }
+        }
+        // Ugh.  just set the legacy defaults
+        shadowMode = ccsInfo.isEnabled();
+        primaryCCS_URL = ccsInfo.getCCS_URL();
+        primaryCCS_user_login = ccsInfo.getCCS_user_login();
+        primaryCCS_user_pw = ccsInfo.getCCS_user_pw();
+        lastShadowEventID = ccsInfo.getLastEventID();
+    }
 
+    /**
+     * Gets the remote CCS information for the supplied user.
+     * Returns a default hand-crafted object if there is not a specific one defined.
+     *
+     * @param account eg. feeder1, feeder2, etc.
+     * @return a RemoteCCSInformation object describing the remote CCS connectino.
+     *      This routine never returns null.
+     */
     public RemoteCCSInformation getRemoteCCSInfo(String account) {
         RemoteCCSInformation remoteInfo = null;
 
@@ -917,7 +944,8 @@ public class ContestInformation implements Serializable{
                     break;
                 }
             }
-        } else {
+        }
+        if(remoteInfo == null) {
             // If no specific one defined for this account, just make one using the defaults (Backward compatiblity)
             remoteInfo = new RemoteCCSInformation(account, RemoteCCSType.SHADOW, shadowMode, primaryCCS_URL, primaryCCS_user_login, primaryCCS_user_pw);
         }

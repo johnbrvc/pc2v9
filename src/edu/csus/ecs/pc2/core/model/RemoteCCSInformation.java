@@ -2,12 +2,21 @@
 
 package edu.csus.ecs.pc2.core.model;
 
+import java.io.Serializable;
+
+import edu.csus.ecs.pc2.core.StringUtilities;
+
 /**
  * @author John Buck
  *
  * Contains per-remote CCS connection information
  */
-public class RemoteCCSInformation {
+public class RemoteCCSInformation  implements Serializable {
+
+    /**
+     *
+     */
+    private static final long serialVersionUID = 1L;
 
     public enum RemoteCCSType {
         /**
@@ -26,7 +35,7 @@ public class RemoteCCSInformation {
     private String CCS_URL = null;
     private String CCS_user_login = "";
     private String CCS_user_pw = "";
-    private String lastShadowEventID = "";
+    private String lastEventID = "";
     private String accountName = "";
 
     public RemoteCCSInformation(String accountName, RemoteCCSType type, boolean enabled, String url, String login, String password) {
@@ -132,8 +141,8 @@ public class RemoteCCSInformation {
      * "Shadow CCS" or "Combined scoreboard").
      * @return a String containing a remote event id
      */
-    public String getLastShadowEventID() {
-        return lastShadowEventID;
+    public String getLastEventID() {
+        return lastEventID;
     }
 
     /**
@@ -143,7 +152,45 @@ public class RemoteCCSInformation {
      * "Shadow CCS" or "Combined scoreboard").
      * @param lastShadowEventID a String identifying the last event from the remote CCS
      */
-     public void setLastShadowEventID(String lastShadowEventID) {
-        this.lastShadowEventID = lastShadowEventID;
+     public void setLastEventID(String lastShadowEventID) {
+        this.lastEventID = lastEventID;
     }
+
+     /**
+      * Returns true if the fields of the specified {@link RemoteCCSInformation} object are
+      * the same as those in this ShadowInformation object; false otherwise.
+      *
+      * @param otherCCSInfo the RemoteCCSInformation object to be compared with this one
+      *
+      * @return true if the other object is equivalent to this object
+      */
+     public boolean isSameAs(RemoteCCSInformation otherCCSInfo) {
+         try {
+             if (enabled != otherCCSInfo.isEnabled()) {
+                 return false;
+             }
+             if(type != otherCCSInfo.getType()) {
+                 return(false);
+             }
+             if (! StringUtilities.stringSame(CCS_URL, otherCCSInfo.getCCS_URL())) {
+                 return false;
+             }
+             if (! StringUtilities.stringSame(CCS_user_login, otherCCSInfo.getCCS_user_login())) {
+                 return false;
+             }
+             if (! StringUtilities.stringSame(CCS_user_pw, otherCCSInfo.getCCS_user_pw())) {
+                 return false;
+             }
+             if (! StringUtilities.stringSame(lastEventID, otherCCSInfo.getLastEventID())) {
+                 return false;
+             }
+
+             return true;
+
+         } catch (Exception e) {
+             e.printStackTrace(System.err); // TODO log this exception
+             return false;
+         }
+     }
+
 }
