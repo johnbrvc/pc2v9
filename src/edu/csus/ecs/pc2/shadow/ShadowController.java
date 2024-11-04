@@ -29,6 +29,7 @@ import edu.csus.ecs.pc2.core.model.IContestInformationListener;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
 import edu.csus.ecs.pc2.core.model.Judgement;
 import edu.csus.ecs.pc2.core.model.JudgementRecord;
+import edu.csus.ecs.pc2.core.model.RemoteCCSInformation;
 import edu.csus.ecs.pc2.core.model.Run;
 import edu.csus.ecs.pc2.core.standings.json.TeamScoreRow;
 import edu.csus.ecs.pc2.services.core.ScoreboardJson;
@@ -213,11 +214,7 @@ public class ShadowController {
      */
     public ShadowController(IInternalContest localContest, IInternalController localController, IShadowMonitorStatus mon, String lastToken,
             boolean combineScoreboards) {
-
-        this(localContest, localController, mon, lastToken,
-                localContest.getContestInformation().getPrimaryCCS_URL(),
-                localContest.getContestInformation().getPrimaryCCS_user_login(),
-                localContest.getContestInformation().getPrimaryCCS_user_pw(), combineScoreboards);
+        this(localContest, localController, mon, lastToken, null, null, null, combineScoreboards);
 
     }
 
@@ -254,9 +251,16 @@ public class ShadowController {
 
         this.localContest = localContest;
         this.localController = localController;
-        this.remoteCCSURLString = remoteURL;
-        this.remoteCCSLogin = remoteCCSLogin;
-        this.remoteCCSPassword = remoteCCSPassword;
+        if(remoteURL == null) {
+            RemoteCCSInformation ccsInfo = localContest.getContestInformation().getRemoteCCSInfo(localContest.getClientId().getName());
+            this.remoteCCSURLString = ccsInfo.getCCS_URL();
+            this.remoteCCSLogin = ccsInfo.getCCS_user_login();
+            this.remoteCCSPassword = ccsInfo.getCCS_user_pw();
+        } else {
+            this.remoteCCSURLString = remoteURL;
+            this.remoteCCSLogin = remoteCCSLogin;
+            this.remoteCCSPassword = remoteCCSPassword;
+        }
         this.shadowMonitorStatus = mon;
         this.lastToken = lastToken;
         this.combineScoreboards = combineScoreboards;

@@ -152,7 +152,7 @@ public class RemoteCCSInformation  implements Serializable {
      * "Shadow CCS" or "Combined scoreboard").
      * @param lastShadowEventID a String identifying the last event from the remote CCS
      */
-     public void setLastEventID(String lastShadowEventID) {
+     public void setLastEventID(String lastEventID) {
         this.lastEventID = lastEventID;
     }
 

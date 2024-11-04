@@ -903,8 +903,8 @@ public class ContestInformation implements Serializable{
         sandboxInteractiveGraceMultiplier = nSecs;
     }
 
-    public void setRemoteCCSInfo(RemoteCCSInformation [] info) {
-        remoteCCSInfo = info;
+    public void setRemoteCCSInfo(RemoteCCSInformation [] ccsInfo) {
+        remoteCCSInfo = ccsInfo;
     }
     public void setRemoteCCSInfo(String accountName, RemoteCCSInformation ccsInfo) {
         if(remoteCCSInfo != null) {
@@ -913,7 +913,7 @@ public class ContestInformation implements Serializable{
             for(i = 0; i < n; i++) {
                 info = remoteCCSInfo[i];
                 if(info.getAccountName().equals(accountName)) {
-                    remoteCCSInfo[i] = info;
+                    remoteCCSInfo[i] = ccsInfo;
                     return;
                 }
             }

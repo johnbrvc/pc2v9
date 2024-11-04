@@ -760,7 +760,9 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
         }
 
         updateShadowSettingsPane(currentlyShadowing);
-        lastToken = contestInformation.getLastShadowEventID();
+
+        RemoteCCSInformation ccsInfo = contestInformation.getRemoteCCSInfo(getContest().getClientId().getName());
+        lastToken = ccsInfo.getLastEventID();
         lastEventTextfield.setText(lastToken);
     }
 
@@ -794,6 +796,7 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
                 getShadowSettingsPane().getRemoteCCSURLTextfield().getText(),
                 getShadowSettingsPane().getRemoteCCSLoginTextfield().getText(),
                 getShadowSettingsPane().getRemoteCCSPasswdTextfield().getText());
+        newCCSInformation.setLastEventID(lastEventTextfield.getText());
         return (newCCSInformation);
     }
 
@@ -813,14 +816,18 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
 //                          + "\n           passwd: " + ccsInfo.getCCS_user_pw()
 //                          + "\n        lastEvent: " + ccsInfo.getLastEventID());
 //
-//        RemoteCCSInformation curInfo = savedContestInformation.getRemoteCCSInfo(getContest().getClientId().getName())
-//        System.out.println ("UpdateContestInformation(): savedContestInformation contains the following shadow info:");
-//        System.out.println ("          Enabled: " + curInfo.isEnabled()
-//                          + "\n             Type: " + curInfo.getType().toString()
-//                          + "\n              URL: " + curInfo.getCCS_URL()
-//                          + "\n            login: " + curInfo.getCCS_user_login()
-//                          + "\n           passwd: " + curInfo.getCCS_user_pw()
-//                          + "\n        lastEvent: " + curInfo.getLastEventID());
+//        if(savedContestInformation!= null) {
+//            RemoteCCSInformation curInfo = savedContestInformation.getRemoteCCSInfo(getContest().getClientId().getName());
+//            System.out.println ("UpdateContestInformation(): savedContestInformation contains the following shadow info:");
+//            System.out.println ("          Enabled: " + curInfo.isEnabled()
+//                              + "\n             Type: " + curInfo.getType().toString()
+//                              + "\n              URL: " + curInfo.getCCS_URL()
+//                              + "\n            login: " + curInfo.getCCS_user_login()
+//                              + "\n           passwd: " + curInfo.getCCS_user_pw()
+//                              + "\n        lastEvent: " + curInfo.getLastEventID());
+//        } else {
+//            System.out.println ("UpdateContestInformation(): there is no saveContestInformation (null)");
+//        }
 
         ContestInformation contestInfo = getContest().getContestInformation();
         contestInfo.setRemoteCCSInfo(getContest().getClientId().getName(), ccsInfo);
