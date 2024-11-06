@@ -80,7 +80,8 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
     private static final int VERT_PAD = 2;
     private static final int HORZ_PAD = 20;
 
-    private static final String CCS_API_ENDPOINT = "/";
+//    private static final String CCS_API_ENDPOINT = "/";
+    private static final String CCS_API_ENDPOINT = "";
 
     private JPanel buttonPanel = null;
 
