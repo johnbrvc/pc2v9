@@ -37,14 +37,16 @@ public class RemoteCCSInformation  implements Serializable {
     private String CCS_user_pw = "";
     private String lastEventID = "";
     private String accountName = "";
+    private int teamOffset = 0;
 
-    public RemoteCCSInformation(String accountName, RemoteCCSType type, boolean enabled, String url, String login, String password) {
+    public RemoteCCSInformation(String accountName, RemoteCCSType type, boolean enabled, String url, String login, String password, int teamOffset) {
         this.accountName = accountName;
         this.type = type;
         this.enabled = enabled;
         this.CCS_URL = url;
         this.CCS_user_login = login;
         this.CCS_user_pw = password;
+        this.teamOffset = teamOffset;
     }
 
     /**
@@ -184,6 +186,9 @@ public class RemoteCCSInformation  implements Serializable {
              if (! StringUtilities.stringSame(lastEventID, otherCCSInfo.getLastEventID())) {
                  return false;
              }
+             if (teamOffset != otherCCSInfo.getTeamOffset()) {
+                 return(false);
+             }
 
              return true;
 
@@ -191,6 +196,22 @@ public class RemoteCCSInformation  implements Serializable {
              e.printStackTrace(System.err); // TODO log this exception
              return false;
          }
+     }
+
+     /**
+      * Returns an integer containing the offset to be added to team ID's
+      * @return an integer offset
+      */
+     public int getTeamOffset() {
+         return teamOffset;
+     }
+
+     /**
+      * Sets the value of the integer team offset to add to each received team id.
+      * @param teamOffset an integer identifying the team offset to be added to each team id
+      */
+      public void setTeamOffset(int teamOffset) {
+         this.teamOffset = teamOffset;
      }
 
 }

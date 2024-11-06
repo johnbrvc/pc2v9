@@ -1230,6 +1230,7 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
                  *     url: https://icpc.displayadmin.com:50443/cgi-bin/GNY2024Real
                  *     login: pc2
                  *     password: GNY123
+                 *     team-offset: 1000
                  *
                  *   - account: feeder2
                  *     type: combinescoreboard
@@ -1251,8 +1252,9 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
                 checkField(login, "RemoteCCS login");
                 String password = fetchValue(map, "password");
                 checkField(password, "RemoteCCS password");
+                int teamOffset = fetchIntValue(map, "team-offset", 0);
 
-                ccsVector.add(new RemoteCCSInformation(accountName, type, enabled, url, login, password));
+                ccsVector.add(new RemoteCCSInformation(accountName, type, enabled, url, login, password, teamOffset));
             }
         }
         if(ccsVector.size() > 0) {

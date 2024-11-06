@@ -781,6 +781,7 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
         getShadowSettingsPane().getRemoteCCSLoginTextfield().setEditable(!currentlyShadowing);
         getShadowSettingsPane().getRemoteCCSPasswdTextfield().setEditable(!currentlyShadowing);
         getShadowSettingsPane().getCombineScoreboardsCheckbox().setEnabled(!currentlyShadowing);
+        getShadowSettingsPane().setTeamIdOffset(info.getTeamOffset());
        lastEventTextfield.setEditable(!currentlyShadowing);
     }
 
@@ -796,7 +797,8 @@ public class ShadowControlPane extends JPanePlugin implements IShadowMonitorStat
                 getShadowSettingsPane().getShadowModeCheckbox().isSelected(),
                 getShadowSettingsPane().getRemoteCCSURLTextfield().getText(),
                 getShadowSettingsPane().getRemoteCCSLoginTextfield().getText(),
-                getShadowSettingsPane().getRemoteCCSPasswdTextfield().getText());
+                getShadowSettingsPane().getRemoteCCSPasswdTextfield().getText(),
+                getShadowSettingsPane().getTeamIdOffset());
         newCCSInformation.setLastEventID(lastEventTextfield.getText());
         return (newCCSInformation);
     }

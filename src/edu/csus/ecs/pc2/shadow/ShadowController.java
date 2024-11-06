@@ -76,6 +76,8 @@ public class ShadowController {
 
     private String lastToken = null;
 
+    private int remoteTeamIdOffset = 0;
+
     public enum SHADOW_CONTROLLER_STATUS {
 
         SC_NEVER_STARTED("Shadow Controller has never been started"),
@@ -256,6 +258,7 @@ public class ShadowController {
             this.remoteCCSURLString = ccsInfo.getCCS_URL();
             this.remoteCCSLogin = ccsInfo.getCCS_user_login();
             this.remoteCCSPassword = ccsInfo.getCCS_user_pw();
+            this.remoteTeamIdOffset = ccsInfo.getTeamOffset();
         } else {
             this.remoteCCSURLString = remoteURL;
             this.remoteCCSLogin = remoteCCSLogin;
@@ -355,6 +358,7 @@ public class ShadowController {
             monitor = new RemoteEventFeedMonitor(localController, remoteContestAPIAdapter, remoteCCSURL, remoteCCSLogin, remoteCCSPassword, submitter, shadowMonitorStatus);
 
             monitor.setCombinedScoreboardClient(combineScoreboards);
+            monitor.setRemoteTeamIdOffset(remoteTeamIdOffset);
 
             if (! remoteContestAPIAdapter.testConnection()){
 

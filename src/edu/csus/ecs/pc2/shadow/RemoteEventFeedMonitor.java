@@ -60,7 +60,7 @@ import edu.csus.ecs.pc2.ui.ShadowCompareRunsPane;
  */
 public class RemoteEventFeedMonitor implements Runnable {
 
-    public static final int REMOTE_EVENT_FEED_DELAYMS = 500;
+    public static final int REMOTE_EVENT_FEED_DELAYMS = 50;
     public static final int RECONNECT_RETRY_DELAY = 5000;
     public static final boolean ATTEMPT_RECONNECTS = true;
     public static final boolean ALLOW_PRESTART_ACTIVITY = false;
@@ -128,6 +128,7 @@ public class RemoteEventFeedMonitor implements Runnable {
     // Are we operating in "combined" scoreboard mode where we do not judge submissions, but
     // we accept judgments from the remote?
     private boolean combinedScoreboardMode = COMBINED_SCOREBOARDS;
+    private int remoteTeamIdOffset = 0;
 
    /**
     * A Map mapping remote judgement ids to corresponding submission ids and the judgement applied to that submission.
@@ -354,7 +355,7 @@ public class RemoteEventFeedMonitor implements Runnable {
                                     throw new Exception("Error parsing submission data " + dataMap.toString());
 
                                 } else {
-
+                                    runSubmission.adjustTeamId(getRemoteTeamIdOffset());
                                     logAndDebugPrint(log, Level.INFO, "Found run " + runSubmission.getId() + " from team " +
                                             runSubmission.getTeam_id() + ": event= " + dataMap.toString());
 
@@ -839,6 +840,15 @@ public class RemoteEventFeedMonitor implements Runnable {
         combinedScoreboardMode = bHow;
     }
 
+    private int getRemoteTeamIdOffset() {
+        return(remoteTeamIdOffset);
+    }
+
+    public void setRemoteTeamIdOffset(int nTeamOffset) {
+        remoteTeamIdOffset = nTeamOffset;
+    }
+
+
     /**
      * Initializes the Map<String,String> which holds mappings of judgement id's to corresponding submissions and judgement
      * types (acronymns).
@@ -941,6 +951,7 @@ public class RemoteEventFeedMonitor implements Runnable {
 
                 Map<String, Object> eventDataMap = ( Map<String, Object> ) obj;
                 ShadowRunSubmission runSubmission = createRunSubmission(eventDataMap);
+                runSubmission.adjustTeamId(getRemoteTeamIdOffset());
                 return runSubmission;
             }
         }

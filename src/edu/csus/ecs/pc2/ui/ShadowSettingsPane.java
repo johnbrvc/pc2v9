@@ -50,6 +50,8 @@ public class ShadowSettingsPane extends JPanel {
     private JLabel labelPrimaryCCSPasswd;
     private JTextField textfieldPrimaryCCSPasswd;
 
+    private int teamIdOffset = 0;
+
     private Border margin = new EmptyBorder(5,10,5,10); //top,left,bottom,right
 
     public ShadowSettingsPane() {
@@ -349,4 +351,12 @@ public class ShadowSettingsPane extends JPanel {
 
     }
 
+    // Placeholder until we add gui control.
+    int getTeamIdOffset() {
+        return(teamIdOffset);
+    }
+
+    void setTeamIdOffset(int teamIdOffset) {
+        this.teamIdOffset = teamIdOffset;
+    }
 }

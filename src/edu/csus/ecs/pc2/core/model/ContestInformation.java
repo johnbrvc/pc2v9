@@ -947,7 +947,7 @@ public class ContestInformation implements Serializable{
         }
         if(remoteInfo == null) {
             // If no specific one defined for this account, just make one using the defaults (Backward compatiblity)
-            remoteInfo = new RemoteCCSInformation(account, RemoteCCSType.SHADOW, shadowMode, primaryCCS_URL, primaryCCS_user_login, primaryCCS_user_pw);
+            remoteInfo = new RemoteCCSInformation(account, RemoteCCSType.SHADOW, shadowMode, primaryCCS_URL, primaryCCS_user_login, primaryCCS_user_pw, 0);
         }
         return(remoteInfo);
     }
