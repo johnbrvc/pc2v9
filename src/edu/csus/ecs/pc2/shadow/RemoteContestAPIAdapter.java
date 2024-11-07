@@ -4,6 +4,8 @@ package edu.csus.ecs.pc2.shadow;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.ConnectException;
@@ -12,10 +14,12 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 import edu.csus.ecs.pc2.core.StringUtilities;
@@ -295,21 +299,95 @@ public class RemoteContestAPIAdapter implements IRemoteContestAPIAdapter {
 
     public List<IFile> getRemoteSubmissionFiles(URL submissionFilesURL) {
 
+        File tempZip = null;
+
         try {
 
             //make a connection to the specified URL
             HttpURLConnection conn = createConnection(submissionFilesURL);
 
+            tempZip = File.createTempFile("src-",  ".zip");
+
             //get the bytes (comprising a zipfile) from the specified URL's input stream
             byte[] bytes = toByteArray(conn.getInputStream());
 
+            FileOutputStream oStream = new FileOutputStream(tempZip);
+            oStream.write(bytes);
+            oStream.close();
+
             // Unzip the bytes/zipfile into individual IFiles
-            List<IFile> files = getIFiles(bytes);
+            List<IFile> files = getIFiles(tempZip);
+            tempZip.delete();
             return files;
 
         } catch (IOException e) {
+            if(tempZip != null) {
+                tempZip.delete();
+            }
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Get files from a zip file
+     *
+     * @param zipFile The file to read
+     * @return list of IFiles extracted from the input bytes
+     */
+    private List<IFile> getIFiles(File zipFile) {
+
+        List<IFile> files = new ArrayList<IFile>();
+        ZipFile zip = null;
+
+        try {
+
+            zip = new ZipFile(zipFile);
+            ZipEntry entry = null;
+            Enumeration<? extends ZipEntry> zipEntries = zip.entries();
+            /**
+             * Read each zip entry, add IFile.
+             */
+            for(; zipEntries.hasMoreElements(); ) {
+                entry = zipEntries.nextElement();
+
+                if(entry.isDirectory()) {
+                    continue;
+                }
+                String entryName = entry.getName();
+
+                ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
+
+                byte[] buffer = new byte[8096];
+                int bytesRead = 0;
+                InputStream is = zip.getInputStream(entry);
+                while ((bytesRead = is.read(buffer)) != -1)
+                {
+                    byteOutputStream.write(buffer, 0, bytesRead);
+                }
+
+                String base64Data = getBase64Data(byteOutputStream.toByteArray());
+                IFile iFile = new IFileImpl(entryName, base64Data);
+                files.add(iFile);
+
+                byteOutputStream.close();
+
+                is.close();
+            }
+            zip.close();
+
+        } catch (Exception e) {
+            if (zip != null){
+                try {
+                    zip.close();
+                } catch (Exception ze) {
+                    ; // problem closing stream, ignore.
+                }
+            }
+            throw new RuntimeException(e);
+        }
+
+        return files;
+
     }
 
     /**
