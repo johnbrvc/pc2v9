@@ -21,11 +21,10 @@ import edu.csus.ecs.pc2.core.IInternalController;
 import edu.csus.ecs.pc2.core.model.Clarification;
 import edu.csus.ecs.pc2.core.model.ClarificationAnswer;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
-import edu.csus.ecs.pc2.core.util.JSONTool;
 
 /**
  * WebService to handle languages
- * 
+ *
  * @author ICPC
  *
  */
@@ -51,7 +50,7 @@ public class ClarificationService implements Feature {
     /**
      * This method returns a representation of the current contest groups in JSON format. The returned value is a JSON array with one language description per array element, matching the description
      * at {@link https://clics.ecs.baylor.edu/index.php/Draft_CCS_REST_interface#GET_baseurl.2Flanguages}.
-     * 
+     *
      * @return a {@link Response} object containing the contest languages in JSON form
      */
     @GET
@@ -120,7 +119,7 @@ public class ClarificationService implements Feature {
                         ClarificationAnswer clarificationAnswer = clarAnswers[j];
                         if (clarificationAnswer.getElementId().toString().equals(clarificationId)) {
                             return Response.ok(jsonTool.convertToJSON(clarification, clarificationAnswer).toString(), MediaType.APPLICATION_JSON).build();
-                        }                    
+                        }
                     }
                 }
             }
