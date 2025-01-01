@@ -3912,8 +3912,6 @@ public class InternalController implements IInternalController, ITwoToOne, IBtoA
         Packet packet;
         packet = PacketFactory.createClarificationSubmission(contest.getClientId(), serverClientId, clarification);
 
-
-
         sendToLocalServer(packet);
     }
 
