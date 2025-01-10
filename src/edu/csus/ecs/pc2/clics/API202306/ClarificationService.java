@@ -61,7 +61,7 @@ import edu.csus.ecs.pc2.services.eventFeed.WebServer;
 @Singleton
 public class ClarificationService implements Feature {
 
-    private static final int MAX_CLAR_RESPONSE_WAIT_MS = 30000;
+    private static final int MAX_CLAR_RESPONSE_WAIT_MS = 10000;
     private static final int CLAR_RESPONSE_CHECK_FREQ_MS = 100;
     private static final String DEFAULT_CATEGORY = "General";
 
@@ -236,7 +236,8 @@ public class ClarificationService implements Feature {
             return Response.status(Status.BAD_REQUEST).entity("text must not be empty").build();
         }
 
-        if(!sc.isUserInRole(WebServer.WEBAPI_ROLE_ADMIN) && (clar.getTo_team_id() != null || clar.getTime() != null || clar.getContest_time() != null || clar.getReply_to_id() != null)) {
+        if(!sc.isUserInRole(WebServer.WEBAPI_ROLE_ADMIN) && !sc.isUserInRole(WebServer.WEBAPI_ROLE_JUDGE)
+            && (clar.getTo_team_id() != null || clar.getTime() != null || clar.getContest_time() != null || clar.getReply_to_id() != null)) {
             return Response.status(Status.BAD_REQUEST).entity("may not include one or more properties").build();
         }
 
@@ -300,15 +301,11 @@ public class ClarificationService implements Feature {
                     clarListener.setWaitAnswerId(replyToClar.getElementId());
                     controller.submitClarificationAnswer(replyToClar);
                 } else if(clar.getFrom_team_id() == null){
-                    // this is an annoucement since its from a judge/admin.  Really, it COULD be a question (clarification) but it does
+                    // this is an announcement since its from a judge/admin.  Really, it COULD be a question (clarification) but it does
                     // not fit in the model of CLICS
                     // tell listener what to wait for
                     // TODO: allow submitAnnouncement to take 'null' for the 2 arrays.
-                    // TODO: Also allow clientId to be passed in instead of using current client (feederX)
-                    // TODO: Also have submitAnnoucement return ElementId of dummy clarification created.
-                    // TODO: For now, we work around these deficiencies by checking if the question is empty (yikes)
-                    // clarListener.setWaitId(controller.submitAnnouncement(problem, clar.getText(), new ElementId[0], new ClientId[0]));
-                    controller.submitAnnouncement(problem, clar.getText(), new ElementId[0], new ClientId[0]);
+                    clarListener.setWaitId(controller.submitAnnouncement(clientId, problem, clar.getText(), new ElementId[0], new ClientId[0]));
                 } else {
                     // tell listener what to wait for
                     clarListener.setWaitId(controller.submitClarification(clientId, problem, clar.getText()));
@@ -663,10 +660,6 @@ public class ClarificationService implements Feature {
             // Only match the clar we're waiting for
             if(waitId != null && newClar != null && waitId.equals(newClar.getElementId())) {
                 waitClarification = event.getClarification();
-            }
-            // Special case for annoucements - fix this when submitAnnoucement returns an ElementId
-            else if(newClar.getQuestion().isEmpty() && waitClarification == null) {
-                waitClarification = newClar;
             }
         }
 
