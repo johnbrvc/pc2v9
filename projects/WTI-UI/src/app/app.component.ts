@@ -159,7 +159,7 @@ export class AppComponent implements OnInit {
 						console.log (this._contestService);
 					}
 					this._contestService.isContestRunning = val;
-					this._contestService.contestClock.next();
+					this._contestService.contestClockEvent.next();
 				});
 
         //get the most recently saved Option values from sessionStorage
@@ -180,6 +180,12 @@ export class AppComponent implements OnInit {
         	}
         }
         
+		//restore the contest clock on-screen display values (elapsed and remaining)
+	    if (DEBUG_MODE) {
+	    	console.log ('Updating local contest clock values from server');
+	    }
+		this._contestService.updateLocalContestClockFromServer();
+		
 	    // transfer to the (former) "current page".
 	    let page = getCurrentPage();
 	    if (DEBUG_MODE) {
@@ -187,7 +193,6 @@ export class AppComponent implements OnInit {
 	    }
 	    
 	    //navigate to the most recently saved page
-	    // TODO:  consider whether using history.pushState()/popState() is a better solution for this...
 	    this.router.navigate([page])
 	      .then(nav => {
 	         if (DEBUG_MODE) {
