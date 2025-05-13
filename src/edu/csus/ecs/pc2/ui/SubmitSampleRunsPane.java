@@ -1248,9 +1248,25 @@ public class SubmitSampleRunsPane extends JPanePlugin {
                     runTableModel.addRow(objects);
                 } else {
                     // Update all fields
-                    for(int j = runTableModel.getColumnCount()-1; j >= 0; j--) {
+                    int colCnt = runTableModel.getColumnCount();
+                    for(int j = colCnt-1; j >= 0; j--) {
                         runTableModel.setValueAt(objects[j], rowNumber, j);
                     }
+                    StringBuilder rec = new StringBuilder();
+                    String strText;
+                    for(int j = 0; j < colCnt-1; j++) {
+                        if(j > 0) {
+                            rec.append(",");
+                        }
+                        if(objects[j] != null) {
+                            if(objects[j] instanceof JLabel) {
+                                rec.append(((JLabel)objects[j]).getText());
+                            } else if(objects[j] instanceof String){
+                                rec.append(objects[j].toString());
+                            }
+                        }
+                    }
+                    log.info(rec.toString());;
                 }
 
                 if (autoSizeAndSort) {
