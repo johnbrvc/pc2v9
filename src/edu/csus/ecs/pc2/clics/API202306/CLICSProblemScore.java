@@ -4,6 +4,7 @@ package edu.csus.ecs.pc2.clics.API202306;
 import java.util.HashMap;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import edu.csus.ecs.pc2.core.StringUtilities;
@@ -18,7 +19,7 @@ import edu.csus.ecs.pc2.core.standings.ProblemSummaryInfo;
  * @author John Buck
  *
  */
-
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class CLICSProblemScore {
 
     @JsonProperty
@@ -65,6 +66,15 @@ public class CLICSProblemScore {
         if(solved) {
             // Problem solution time is in minutes
             time = StringUtilities.getIntegerValue(psi.getSolutionTime(), 0);
+            String scoreVal = psi.getScore();
+            if(scoreVal != null) {
+                try {
+                    score = Double.parseDouble(scoreVal);
+                } catch (Exception e) {
+                    // Bad double supplied - nothing to do, just don't set it
+                    System.err.println("Bad score: " + scoreVal);
+                }
+            }
         }
     }
 
