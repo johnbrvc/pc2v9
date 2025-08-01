@@ -43,6 +43,7 @@ import edu.csus.ecs.pc2.core.model.IInternalContest;
 import edu.csus.ecs.pc2.core.model.Judgement;
 import edu.csus.ecs.pc2.core.model.JudgementRecord;
 import edu.csus.ecs.pc2.core.model.Problem;
+import edu.csus.ecs.pc2.core.model.ProblemDataFiles;
 import edu.csus.ecs.pc2.core.model.Run;
 import edu.csus.ecs.pc2.core.model.Run.RunStates;
 import edu.csus.ecs.pc2.core.model.RunUtilities;
@@ -55,6 +56,7 @@ import edu.csus.ecs.pc2.core.util.IMemento;
 import edu.csus.ecs.pc2.core.util.RunStatistics;
 import edu.csus.ecs.pc2.core.util.XMLMemento;
 import edu.csus.ecs.pc2.exports.ccs.ResultsFile;
+import edu.csus.ecs.pc2.imports.ccs.TestDataGroup;
 import edu.csus.ecs.pc2.util.ScoreboardVariableReplacer;
 
 /**
@@ -983,7 +985,7 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
         }
 
         summaryMememento.putInteger("medianProblemsSolved", getMedian(srArray));
-        generateSummaryTotalsForProblem (problems, problemsIndexHash, summaryMememento);
+        generateSummaryTotalsForProblem (theContest, problems, problemsIndexHash, summaryMememento);
 
         // We do not do medal or honors citations for individual groups/sites
         // since it does not make sense.  The values set for those are for the
@@ -1121,8 +1123,10 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
      * @param summaryMememento
      */
 
-    private void generateSummaryTotalsForProblem(Problem[] problems, Hashtable<ElementId, Integer> problemsIndexHash, IMemento summaryMememento) {
-
+    private void generateSummaryTotalsForProblem(IInternalContest theContest, Problem[] problems, Hashtable<ElementId, Integer> problemsIndexHash, IMemento summaryMememento) {
+        String score;
+        boolean isScoringContest = theContest.getContestInformation().isScoreboardTypeScore();
+        
         for (int i = 0; i < problems.length; i++) {
             int id = i + 1;
             problemsIndexHash.put(problems[i].getElementId(), new Integer(id));
@@ -1140,6 +1144,12 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
                 problemMemento.putLong("bestSolutionTime",problemBestTime[id]);
                 problemMemento.putLong("lastSolutionTime",problemLastTime[id]);
             }
+            if(isScoringContest) {
+                score = getMaxScore(theContest, problems[i]);
+                if(score != null) {
+                    problemMemento.putString("maxScore", score);
+                }
+            }
         }
         summaryMememento.putInteger("totalAttempts", grandTotalAttempts);
         summaryMememento.putInteger("totalSolved", grandTotalSolutions);
@@ -1149,6 +1159,49 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
 
     }
 
+    /**
+     * For scoring contest, return the maximum score for a problem.  If the score is unbounded,
+     * or not a scoring contest, returns null.  
+     * Removes any decimal fractional part, including the decimal pt.
+     * 
+     * @param theContest
+     * @param problem
+     * @return max score as a string or null
+     */
+    private String getMaxScore(IInternalContest theContest, Problem problem) {
+        String score = null;
+        ProblemDataFiles problemDataFiles = theContest.getProblemDataFile(problem);
+        if(problemDataFiles != null) {
+            TestDataGroup [] testDataGroups = problemDataFiles.getJudgesDataGroups();
+            // Really, there's only 1 top (root) level TestDataGroup which we have to find.  Start at the
+            // first group and walk up the tree to the root (parent being null)
+            if(testDataGroups != null && testDataGroups.length > 0) {
+                TestDataGroup tdg = testDataGroups[0];
+                // Paranoia: this had better not be null.
+                if(tdg != null) {
+                    TestDataGroup parentTdg = tdg.getParent();
+                    while(parentTdg != null) {
+                        tdg = parentTdg;
+                        parentTdg = tdg.getParent();
+                    }
+                    // Departure from spec: if upper range is infinity, just leave it out (max_score will be null).
+                    // Primarily for the Resolver as it doesn't want to see "infinity" as a value.
+                    if(tdg.getRangeMax() != Double.POSITIVE_INFINITY) {
+                        score = Double.valueOf(tdg.getRangeMax()).toString();
+                        int decptIndex = score.indexOf('.');
+                        if(decptIndex >= 0) {
+                            score = score.substring(0, decptIndex);
+                            if(score.isEmpty()) {
+                                score = null;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return(score);
+    }
+    
     /**
      * Calculate standings raw data, set values into standingsRecordHash.
      *
