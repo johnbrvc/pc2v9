@@ -292,6 +292,21 @@ public class ClarificationService implements Feature {
                     }
                     clarificationAnswer = new ClarificationAnswer(clar.getText(), clientId,
                         clar.getTo_team_id() == null, model.getContestTime());
+                    // This next line is a problem because of the way PC2 handles clarification answers.
+                    // A Clarification object contains the original question and an ARRAY of answers.
+                    // Some things only use answers[0], other things use answers[answer.length-1].  It turns
+                    // out that controller.submitClarification uses answers[0] as the answer (IE it always uses
+                    // that), so the clar must have the answer added to it before calling controller.submitClarification().
+                    // Submitting ANOTHER answer for the clarification works, but the answer is still the same
+                    // as the first answer received.  In addition, the local client (in this case the
+                    // event feeder handling this web post request), will have 2 items added to the
+                    // answer list.  The first thing added is the new answer (clar.getText()) The second
+                    // thing added to the answer list is replyToClar.answers[0] - so there are 2 answers added
+                    // each time.  It turns out the first one will always be unused by PC2 since PC2 only ever
+                    // returns the text for answers[0], however, for the clarification answer id, it always
+                    // uses answers[answers.length-1], which is different from the first one *sigh*.
+                    // The moral of the story is: don't send more than one clar answer using the API
+                    // until we solve this whole "answer" business.
                     replyToClar.addAnswer(clarificationAnswer);
                     clarListener.setWaitAnswerId(replyToClar.getElementId());
                     controller.submitClarificationAnswer(replyToClar);
