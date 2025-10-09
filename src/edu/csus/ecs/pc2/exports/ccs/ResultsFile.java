@@ -135,7 +135,14 @@ public class ResultsFile {
 
         Vector<String> lines = new Vector<String>();
 
-        finalizeData = contest.getFinalizeData();
+        FinalizeData fCurrent = contest.getFinalizeData();
+        if (fCurrent == null) {
+            finalizeData = GenDefaultFinalizeData();
+        } else {
+            // Make a copy since we may change the medal counts if ties
+            finalizeData = new FinalizeData();
+            fCurrent.copy(finalizeData);
+        }
 
         NewScoringAlgorithm scoringAlgorithm = new NewScoringAlgorithm();
         scoringAlgorithm.setContest(contest);
@@ -165,13 +172,13 @@ public class ResultsFile {
             throw new RuntimeException("Unable to generate standings ", e.getCause());
         }
 
+        // account for ties in the medal range
+        adjustMedals(standingsRecords, finalizeData);
+        
         int median = getMedian(standingsRecords);
         int highestHonorSolvedCount = 0;
         int highHonorSolvedCount = 0;
 
-        if (finalizeData == null) {
-            finalizeData = GenDefaultFinalizeData();
-        }
         // Only use Bill honors WF ranking rules if not for a specific group and we're doing WF ranks
         // Calculating the Bill honors rules doesn't make sense for sub-groups
         boolean useHonorsRules = (group == null && finalizeData.isUseWFGroupRanking());
@@ -523,5 +530,68 @@ public class ResultsFile {
         finalizeData.setComment("Preliminary Results - Contest not Finalized");
         finalizeData.setUseWFGroupRanking(true);
         return(finalizeData);
+    }
+
+    /*
+     * Searches for ties in the medal range that would force an inferior medal to be
+     * upgraded.  eg.  If there is 1G/2S/3B, and the 2nd place team is exactly tied with
+     * the first place team, then that team should get a gold, meaning there would then be
+     * 2G/1S/3B.
+     */
+    public void adjustMedals(StandingsRecord [] standingsRecords, FinalizeData fData)
+    {
+        int nRec = standingsRecords.length;
+        int medalIndex, medalRank;
+        boolean bGold = false;
+        boolean bSilver = false;
+        boolean bBronze = false;
+        
+        // check the gold/silver boundary.  nedalIndex is index of where the next medal
+        // block starts.
+        // Note: the FinalizeData.getXXXXRank() accessors are a bit misleading.  They are not
+        // really "ranks", but rather "places": ordinal 1..#medals.
+        // That is, the index of the standings records for each medal
+        // place is its (rank-1).
+        // If there are no medals awarded for a given type, then the getXXXXRank() will return 0.
+        medalIndex = fData.getGoldRank();
+        if(medalIndex >= nRec) {
+            return;
+        }
+        // are there gold medals?
+        if(medalIndex > 0) {
+            // get its rank - if anyone has the same rank, they are tied.
+            medalRank = standingsRecords[medalIndex-1].getRankNumber();
+            while(medalIndex < nRec && standingsRecords[medalIndex].getRankNumber() == medalRank) {
+                // tied, so they get the same medal - just increase the gold medal "rank"
+                fData.setGoldRank(medalIndex+1);
+                medalIndex++;
+            }
+        }
+        if(fData.getSilverRank() > medalIndex) {
+            // Still silvers to award
+            medalIndex = fData.getSilverRank();
+            if(medalIndex < nRec) {
+                // get its rank - if anyone has the same rank, they are tied.
+                medalRank = standingsRecords[medalIndex-1].getRankNumber();
+                while(medalIndex < nRec && standingsRecords[medalIndex].getRankNumber() == medalRank) {
+                    // tied, so they get the same medal - just increase the medal "rank"
+                    fData.setSilverRank(medalIndex+1);
+                    medalIndex++;
+                }
+            }
+        }
+        if(fData.getBronzeRank() > medalIndex) {
+            // Still bronzes to award
+            medalIndex = fData.getBronzeRank();
+            if(medalIndex < nRec) {
+                // get its rank - if anyone has the same rank, they are tied.
+                medalRank = standingsRecords[medalIndex-1].getRankNumber();
+                while(medalIndex < nRec && standingsRecords[medalIndex].getRankNumber() == medalRank) {
+                    // tied, so they get the same medal - just increase the medal "rank"
+                    fData.setBronzeRank(medalIndex+1);
+                    medalIndex++;
+                }
+            }
+        }
     }
 }

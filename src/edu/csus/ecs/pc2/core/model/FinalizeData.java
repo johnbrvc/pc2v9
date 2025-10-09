@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2024 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2025 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.core.model;
 
 import java.io.Serializable;
@@ -49,6 +49,20 @@ public class FinalizeData implements Serializable {
 
     private int honorSolvedCount = 0;
 
+    public void copy(FinalizeData fDst) {
+        fDst.goldRank = this.goldRank;
+        fDst.silverRank = this.silverRank;
+        fDst.bronzeRank = this.bronzeRank;
+        fDst.comment = this.comment;
+        fDst.certified = this.certified;
+        fDst.certificationDate = this.certificationDate;
+        fDst.useWFGroupRanking = this.useWFGroupRanking;
+        fDst.customizeHonorsSolvedCount = this.customizeHonorsSolvedCount;
+        fDst.highestHonorSolvedCount = this.highestHonorSolvedCount;
+        fDst.highHonorSolvedCount = this.highHonorSolvedCount;
+        fDst.honorSolvedCount = this.honorSolvedCount;
+    }
+    
     /**
      * @return last rank for gold.
      */
