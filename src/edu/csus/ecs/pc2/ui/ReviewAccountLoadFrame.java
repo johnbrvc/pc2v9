@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2024 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2025 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.ui;
 
 import java.awt.BorderLayout;
@@ -309,6 +309,26 @@ public class ReviewAccountLoadFrame extends JFrame implements UIPlugin {
         });
     }
 
+    private String showPermission(Permission.Type pType, Account accountOrig, Account account, String sep) {
+        String permString = "";
+        boolean allowed = account.isAllowed(pType);
+        boolean changed = allowed ^ accountOrig.isAllowed(pType);
+        if(allowed) {
+            permString = permString + "+";
+        } else {
+            // We don't show disallowed perms if they haven't changed (too much clutter)
+            if(!changed) {
+                return("");
+            }
+            permString = permString + "-";
+        }
+        permString = permString + pType.name();
+        if(changed) {
+            permString = permString + CHANGE_END;
+        }
+        return(permString + sep);
+    }
+
     protected Object[] buildAccountRow(Account account) {
         // Object[] cols = { "Site", "Type", "Account Id", "Display Name", "Password", "Permissions", "Group", "Alias", "ICPC Id", "Short School Name","Long School Name", "Inst Id", "Team Name", "Country"}
         try {
@@ -331,15 +351,22 @@ public class ReviewAccountLoadFrame extends JFrame implements UIPlugin {
                 s[4] = CHANGE_BEGIN + account.getPassword() + CHANGE_END;
             }
             String perms = "";
-            if (account.isAllowed(Permission.Type.DISPLAY_ON_SCOREBOARD)) {
-                perms = perms + "DISPLAY_ON_SCOREBOARD ";
-            }
-            if (account.isAllowed(Permission.Type.LOGIN)) {
-                perms = perms + "LOGIN ";
-            }
-            if (account.isAllowed(Permission.Type.CHANGE_PASSWORD)) {
-                perms = perms + "CHANGE_PASSWORD ";
-            }
+            perms = perms + showPermission(Permission.Type.DISPLAY_ON_SCOREBOARD, accountOrig, account, ",");
+            perms = perms + showPermission(Permission.Type.LOGIN, accountOrig, account, ",");
+            perms = perms + showPermission(Permission.Type.CHANGE_PASSWORD, accountOrig, account, ",");
+            perms = perms + showPermission(Permission.Type.ALLOWED_TO_FETCH_RUN, accountOrig, account, "");
+//            if (account.isAllowed(Permission.Type.DISPLAY_ON_SCOREBOARD)) {
+//                perms = perms + "DISPLAY_ON_SCOREBOARD ";
+//            }
+//            if (account.isAllowed(Permission.Type.LOGIN)) {
+//                perms = perms + "LOGIN ";
+//            }
+//            if (account.isAllowed(Permission.Type.CHANGE_PASSWORD)) {
+//                perms = perms + "CHANGE_PASSWORD ";
+//            }
+//            if (account.isAllowed(Permission.Type.ALLOWED_TO_FETCH_RUN)) {
+//                perms = perms + "ALLOWED_TO_FETCH_RUN ";
+//            }
             s[5] = perms.trim();
 
             HashSet<ElementId> groupsOrig = accountOrig.getGroupIds();

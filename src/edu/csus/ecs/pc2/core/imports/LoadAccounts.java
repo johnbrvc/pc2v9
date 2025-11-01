@@ -62,6 +62,8 @@ public class LoadAccounts {
 
     private int permPasswordColumn = -1;
 
+    private int permFetchRunColumn = -1;
+
     /*
      * These correspond to columns found in the icpc data
      */
@@ -208,6 +210,23 @@ public class LoadAccounts {
                 }
             } else {
                 if (Boolean.parseBoolean(values[permPasswordColumn])) {
+                    account.addPermission(perm);
+                } else {
+                    account.removePermission(perm);
+                }
+            }
+        }
+        if (permFetchRunColumn != -1 && values.length > permFetchRunColumn && values[permFetchRunColumn].length() > 0) {
+            Permission.Type perm = Permission.Type.ALLOWED_TO_FETCH_RUN;
+            boolean newValue = Boolean.parseBoolean(values[permFetchRunColumn]);
+            if (clientId.getClientType().equals(ClientType.Type.ADMINISTRATOR) && clientId.getClientNumber() == 1) {
+                if (account.getPermissionList().isAllowed(perm) != newValue) {
+                    String message = "Attempt to change root permission "+perm+" denied.";
+                    StaticLog.warning(message);
+                    System.out.println("WARNING: "+message);
+                }
+            } else {
+                if (Boolean.parseBoolean(values[permFetchRunColumn])) {
                     account.addPermission(perm);
                 } else {
                     account.removePermission(perm);
@@ -381,6 +400,22 @@ public class LoadAccounts {
                 }
             }
         }
+        if (permFetchRunColumn != -1 && values.length > permFetchRunColumn && values[permFetchRunColumn].length() > 0) {
+            boolean newValue = Boolean.parseBoolean(values[permFetchRunColumn]);
+            if (clientId.getClientType().equals(ClientType.Type.ADMINISTRATOR) && clientId.getClientNumber() == 1) {
+                if (account.getPermissionList().isAllowed(Permission.Type.ALLOWED_TO_FETCH_RUN) != newValue) {
+                    String message = "Attempt to change root permission ALLOWED_TO_FETCH_RUN denied.";
+                    StaticLog.warning(message);
+                    System.out.println("WARNING: "+message);
+                }
+            } else {
+                if (Boolean.parseBoolean(values[permFetchRunColumn])) {
+                    account.addPermission(Permission.Type.ALLOWED_TO_FETCH_RUN);
+                } else {
+                    account.removePermission(Permission.Type.ALLOWED_TO_FETCH_RUN);
+                }
+            }
+        }
         if (scoreAdjustmentColumn != -1 && values.length > scoreAdjustmentColumn && values[scoreAdjustmentColumn].length() > 0) {
             try {
                 int newValue = Integer.parseInt(values[scoreAdjustmentColumn]);
@@ -492,6 +527,7 @@ public class LoadAccounts {
             permDisplayColumn = -1;
             permLoginColumn = -1;
             permPasswordColumn = -1;
+            permFetchRunColumn = -1;
             scoreAdjustmentColumn = -1;
             /*
              * These correspond to columns found in the icpc data
@@ -533,6 +569,9 @@ public class LoadAccounts {
                 }
                 if (Constants.PERMPASSWORD_COLUMN_NAME.equalsIgnoreCase(columns[i])) {
                     permPasswordColumn = i;
+                }
+                if (Constants.PERMFETCH_RUN_COLUMN_NAME.equalsIgnoreCase(columns[i])) {
+                    permFetchRunColumn = i;
                 }
                 if (Constants.LONGSCHOOLNAME_COLUMN_NAME.equalsIgnoreCase(columns[i])) {
                     longSchoolNameColumnn = i;
@@ -715,6 +754,7 @@ public class LoadAccounts {
             permDisplayColumn = -1;
             permLoginColumn = -1;
             permPasswordColumn = -1;
+            permFetchRunColumn = -1;
             scoreAdjustmentColumn = -1;
 
             /*
@@ -757,6 +797,9 @@ public class LoadAccounts {
                 }
                 if (Constants.PERMPASSWORD_COLUMN_NAME.equalsIgnoreCase(columns[i])) {
                     permPasswordColumn = i;
+                }
+                if (Constants.PERMFETCH_RUN_COLUMN_NAME.equalsIgnoreCase(columns[i])) {
+                    permFetchRunColumn = i;
                 }
                 if (Constants.LONGSCHOOLNAME_COLUMN_NAME.equalsIgnoreCase(columns[i])) {
                     longSchoolNameColumnn = i;
