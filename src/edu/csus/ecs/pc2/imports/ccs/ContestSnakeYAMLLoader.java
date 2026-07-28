@@ -456,7 +456,6 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
         if(!StringUtilities.isEmpty(contestFormal)) {
             setTitle(contest, contestFormal);
         }
-        }
 
         boolean ccsTestMode = ContestImportUtilities.fetchBooleanValue(content, CCS_TEST_MODE, false);
         if (ccsTestMode) {
@@ -552,15 +551,8 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
             setSandboxInteractiveTimeMultiplier(contest, sandboxIntMult);
         }
 
-        for (String line : yamlLines) {
-            if (line.startsWith(CLICS_CONTEST_NAME + DELIMIT) || line.startsWith(CONTEST_NAME_KEY + DELIMIT)) {
-                setTitle(contest, unquoteAll(line.substring(line.indexOf(DELIMIT) + 1).trim()));
-            }
-        }
-
         loadDataFileContents = ContestImportUtilities.fetchBooleanValue(content, PROBLEM_LOAD_DATA_FILES_KEY, loadDataFileContents);
 
-        String shortContestName = ContestImportUtilities.fetchValue(content, CLICS_CONTEST_ID);
         // Check if id is CLICS compliant
         if (!StringUtilities.isEmpty(contestId)) {
             if (!StringUtilities.isStringCLICSCompliant(contestId)) {
