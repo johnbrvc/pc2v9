@@ -43,7 +43,7 @@ public class JSON202306Utilities extends JSONUtilities {
 
     public static final String ORGANIZATION_KEY = "organizations";
 
-    public static final String PC2_SUBMISSION_ID_KEY = "pc2_submission_id";
+    public static final String PC2_SUBMISSION_ID_KEY = "pc2_deleted_submission_id";
 
     public static final String JSON_ANNOTATION_INTERFACE = ".JsonProperty";
 
@@ -255,8 +255,14 @@ public class JSON202306Utilities extends JSONUtilities {
             stringBuilder.append(",\"");
             stringBuilder.append(customProperty);
             stringBuilder.append("\": ");
-            // null is safe here
-            stringBuilder.append(customValue);
+            if(customValue == null) {
+                stringBuilder.append("null");
+            } else {
+                stringBuilder.append("\"");
+                stringBuilder.append(customValue);
+                stringBuilder.append("\"");
+            }
+            stringBuilder.append("}");
         }
     }
 
