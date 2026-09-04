@@ -530,6 +530,13 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
                 contestInformation.setScoreboardXSLFiles(scoreboardXSLFiles.trim().split(","));
             }
         }
+        //Scoreboard section.
+        //TODO: refactor top-level scoreboard flags into the scoreboard section (previously,
+        // all scoreboard-related flags were specified at the top level; with the introduction
+        // of more and more such flags, a recent PR placed certain new scoreboard-related flags
+        // into a new "scoreboard" section; it seems logical that prior existing scoreboard flags
+        // should be consolidated into this new section.  (JLC)
+        loadScoreboardSection(content, contestInformation);
 
         // save ContesInformation to model
         contest.updateContestInformation(contestInformation);
@@ -1230,6 +1237,34 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
         contestInformation.setContestShortName(contestName);
         contest.updateContestInformation(contestInformation);
         contest.setContestIdentifier(contestId);
+    }
+
+    /**
+     * Checks for an optional "scoreboard" section in the specified YAML content;
+     * if present, checks that section for a SHOW_ALL_TEAMS_ON_SCOREBOARD value.
+     * If such a value is found, updates the specified ContestInformation object to 
+     * contain that value.
+     * 
+     *  @return an updated ContestInformation object if the YAML contains scoreboard information;
+     *          returns with no side effects if the YAML doesn't contain scoreboard information.
+     *  @throws YamlLoadException if the YAML contains an illegal/undefined value in the scoreboard section.
+     */
+    @SuppressWarnings("unchecked")
+    private void loadScoreboardSection(Map<String, Object> content, ContestInformation contestInformation) {
+        Map<String, Object> scoreboardContent = (Map<String, Object>) content.get(SCOREBOARD_SECTION_KEY);
+        if (scoreboardContent == null) {
+            return;
+        }
+
+        String showAllTeams = ContestImportUtilities.fetchValue(scoreboardContent, SHOW_ALL_TEAMS_ON_SCOREBOARD_KEY);
+        if (showAllTeams != null) {
+            try {
+                contestInformation.setShowAllTeamsOnScoreboard(
+                        ContestInformation.ShowAllTeamsOnScoreboard.fromYamlValue(showAllTeams));
+            } catch (IllegalArgumentException e) {
+                throw new YamlLoadException(e.getMessage());
+            }
+        }
     }
 
     private void addAutoJudgeSetting(IInternalContest contest, AutoJudgeSetting auto) {
@@ -3481,6 +3516,10 @@ public class ContestSnakeYAMLLoader implements IContestLoader {
         } else {
 
             loadCCSTSVFiles(contest, cdpConfigDirectory);
+
+            //load an optional scoreboard-division file if it exists.
+            //A scoreboard-division file describes assignment of (existing) groups into divisions
+            new DivisionScoreboardYamlLoader().loadDivisionScoreboardYamlOverlay(contest, cdpConfigDirectory);
 
             contest = fromYaml(contest, cdpConfigDirectory.getAbsolutePath());
 
