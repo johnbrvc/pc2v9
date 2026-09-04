@@ -37,6 +37,7 @@ import edu.csus.ecs.pc2.core.model.RunUtilities;
 import edu.csus.ecs.pc2.core.model.Site;
 import edu.csus.ecs.pc2.core.security.Permission;
 import edu.csus.ecs.pc2.core.security.PermissionList;
+import edu.csus.ecs.pc2.core.standings.ScoreboardGroupUtilities;
 import edu.csus.ecs.pc2.core.standings.ScoreboardUtilities;
 import edu.csus.ecs.pc2.core.util.IMemento;
 import edu.csus.ecs.pc2.core.util.XMLMemento;
@@ -299,6 +300,7 @@ public class NewScoringAlgorithm extends Plugin implements INewScoringAlgorithm 
         summaryMememento.putLong("problemCount", problems.length);
         Site[] sites = contest.getSites();
         summaryMememento.putInteger("siteCount", sites.length);
+        summaryMememento.putBoolean("showAllTeams", ScoreboardGroupUtilities.shouldShowAllTeams(contest));
         Group[] groups = contest.getGroups();
         if (groups != null) {
             dumpGroupList(groups, summaryMememento, wantedGroups);
@@ -1060,6 +1062,10 @@ public class NewScoringAlgorithm extends Plugin implements INewScoringAlgorithm 
 
     /**
      * Create XML groupList.
+     * <p>
+     * Attribute {@code id} is the scoreboard group-list ordinal (not External Id).
+     * Attribute {@code divisionWide} reflects {@link Group#isDivisionWideScoreboard()}.
+     * </p>
      *
      * @param groups
      * @param memento
@@ -1067,16 +1073,17 @@ public class NewScoringAlgorithm extends Plugin implements INewScoringAlgorithm 
     private void dumpGroupList(Group[] groups, IMemento memento, List<Group> wantedGroups) {
         memento.putInteger("groupCount", groups.length + 1);
         IMemento groupsMemento = memento.createChild("groupList");
-        int id = 0;
+        int ordinal = 0;
         for (int i = 0; i < groups.length; i++) {
             if (!groups[i].isDisplayOnScoreboard()) {
                 continue;
             }
-            id = id + 1;
+            ordinal = ordinal + 1;
             IMemento groupMemento = groupsMemento.createChild("group");
-            groupMemento.putInteger("id", id);
+            groupMemento.putInteger("id", ordinal);
             groupMemento.putString("title", groups[i].getDisplayName());
             groupMemento.putInteger("externalId", groups[i].getGroupId());
+            groupMemento.putBoolean("divisionWide", groups[i].isDivisionWideScoreboard());
             if (groups[i].getSite() != null) {
                 groupMemento.putInteger("pc2Site", groups[i].getSite().getSiteNumber());
             }
