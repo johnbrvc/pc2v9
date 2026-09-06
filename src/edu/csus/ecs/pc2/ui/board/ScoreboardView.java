@@ -1,4 +1,4 @@
-// Copyright (C) 1989-2024 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
+// Copyright (C) 1989-2026 PC2 Development Team: John Clevenger, Douglas Lane, Samir Ashoo, and Troy Boudreau.
 package edu.csus.ecs.pc2.ui.board;
 
 import java.awt.BorderLayout;
@@ -23,6 +23,7 @@ import edu.csus.ecs.pc2.core.IniFile;
 import edu.csus.ecs.pc2.core.Utilities;
 import edu.csus.ecs.pc2.core.log.Log;
 import edu.csus.ecs.pc2.core.log.StaticLog;
+import edu.csus.ecs.pc2.core.model.ContestInformation;
 import edu.csus.ecs.pc2.core.model.ContestTime;
 import edu.csus.ecs.pc2.core.model.ContestTimeEvent;
 import edu.csus.ecs.pc2.core.model.Group;
@@ -285,13 +286,14 @@ public class ScoreboardView extends JFrame implements UIPlugin {
     }
 
     private void generateOutput(String xmlString, Group group) {
-        String outputDir = contest.getContestInformation().getScoringProperties().getProperty(DefaultScoringAlgorithm.JUDGE_OUTPUT_DIR, "html");
+        ContestInformation ci = contest.getContestInformation();
+        String outputDir = ci.getScoringProperties().getProperty(DefaultScoringAlgorithm.JUDGE_OUTPUT_DIR, "html");
         String groupName = null;
 
         if(group != null) {
             groupName = group.getDisplayName();
         }
-        scoreboardCommon.generateOutput(xmlString, groupName, xslDir, outputDir, log);
+        scoreboardCommon.generateOutput(xmlString, groupName, xslDir, outputDir, ci.getScoreboardXSLFiles(), log);
         scoreboardCommon.generateResults(contest, controller, xmlString, group, xslDir, log);
         try {
             String frozenOutputDir = contest.getContestInformation().getScoringProperties().getProperty(DefaultScoringAlgorithm.PUBLIC_OUTPUT_DIR);
@@ -303,7 +305,7 @@ public class ScoreboardView extends JFrame implements UIPlugin {
                     groupOfOneList.add(group);
                 }
                 String frozenXML = algoFrozen.getStandings(contest, null, null, groupOfOneList,scoringProperties, log);
-                scoreboardCommon.generateOutput(frozenXML, groupName, xslDir, frozenOutputDir, log);
+                scoreboardCommon.generateOutput(frozenXML, groupName, xslDir, frozenOutputDir, ci.getScoreboardXSLFiles(), log);
             }
         } catch (Exception e) {
             log.warning("Exception generating frozen html");
