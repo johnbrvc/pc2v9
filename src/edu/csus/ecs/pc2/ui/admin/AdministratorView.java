@@ -71,6 +71,7 @@ import edu.csus.ecs.pc2.ui.QuickJudgePane;
 import edu.csus.ecs.pc2.ui.ReportPane;
 import edu.csus.ecs.pc2.ui.ResultsComparePane;
 import edu.csus.ecs.pc2.ui.RunsTablePane;
+import edu.csus.ecs.pc2.ui.ScoreboardXSLPane;
 import edu.csus.ecs.pc2.ui.SitesPane;
 import edu.csus.ecs.pc2.ui.StandingsHTMLPane;
 import edu.csus.ecs.pc2.ui.StandingsTablePane;
@@ -262,6 +263,9 @@ public class AdministratorView extends JFrame implements UIPlugin, ChangeListene
 
                 GroupsPane groupsPane = new GroupsPane();
                 addUIPlugin(getConfigureContestTabbedPane(), "Groups", groupsPane);
+
+                ScoreboardXSLPane xslPane = new ScoreboardXSLPane();
+                addUIPlugin(getConfigureContestTabbedPane(), "Scoreboard XSL", xslPane);
 
                 ICPCLoadPane icpcPane = new ICPCLoadPane();
                 addUIPlugin(getConfigureContestTabbedPane(), "ICPC", icpcPane);
