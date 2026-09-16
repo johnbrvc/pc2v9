@@ -86,7 +86,7 @@ public class ScoreboardXSLPane extends JPanePlugin {
     private JTable table = null;
     private File currentFolder = null;
 
-    private String [] currentXslFiles = null;
+    private String [] modelXslFiles = null;
 
     /**
      * This method initializes
@@ -94,6 +94,7 @@ public class ScoreboardXSLPane extends JPanePlugin {
      */
     public ScoreboardXSLPane() {
         super();
+        currentFolder = new File(XMLUtilities.getStyleSheetDirectoryName());
         initialize();
     }
 
@@ -119,17 +120,31 @@ public class ScoreboardXSLPane extends JPanePlugin {
         super.setContestAndController(inContest, inController);
 
         log = getController().getLog();
-        getCurrentXslFiles();
+        getCurrentXslFilesFromModel();
+        loadFiles(currentFolder);
+        updateButtons();
         getContest().addContestInformationListener(new ContestInformationListenerImplementation());
     }
 
-    private void getCurrentXslFiles() {
+    /**
+     * Fetch list of current XSL filenames being used to generate scoreboards from the contest.
+     * To support legacy contests, if the list is null, it means all files in the XSL
+     * folder are selected, so we get that list from the table model in that case.
+     * Otherwise, we just clone the list we got.  It is possible the list is empty - I'm not sure
+     * how useful that is since no scoreboards will be generated in that case.
+     *
+     * Sets modelXslFiles to the list of current XSL file names.
+     */
+    private void getCurrentXslFilesFromModel() {
         ContestInformation ci = getContest().getContestInformation();
+        String [] curXslFiles = ci.getScoreboardXSLFiles();
 
-        currentXslFiles = ci.getScoreboardXSLFiles();
-        if(currentXslFiles != null) {
-            // So we don't clobber the original yet.
-            currentXslFiles = currentXslFiles.clone();
+        if(curXslFiles == null) {
+            // This means all files (legacy support)
+            modelXslFiles = tableModel.getAllFileNames();
+
+        } else {
+            modelXslFiles = curXslFiles.clone();
         }
     }
 
@@ -155,13 +170,16 @@ public class ScoreboardXSLPane extends JPanePlugin {
     }
 
     /**
-     * This method initializes xslListBox
+     * This method initializes xslListPane (a JScrollPane) containing a table of xsl files in
+     * the data/xsl folder along with checkboxes indicating if they are active.
+     * Another column in the table also provides a description of the xsl file.
+     * This is found by examining the first few lines of the xsl for a comment of the
+     * form: <!-- Description: This is the description text that will appear -->
      *
-     * @return edu.csus.ecs.pc2.core.log.MCLB
+     * @return JScrollPane containing the table
      */
     private JScrollPane getXslListPane() {
         if(xslListPane == null) {
-            currentFolder = new File(XMLUtilities.getStyleSheetDirectoryName());
             tableModel = new FileTableModel();
             table = new JTable(tableModel);
 
@@ -173,7 +191,7 @@ public class ScoreboardXSLPane extends JPanePlugin {
             table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
             tableModel.addTableModelListener(e -> {
                 if(e.getColumn() == 0 && e.getType() == TableModelEvent.UPDATE) {
-                    // Checkbox changed, so see what control have to be enabled/disabled
+                    // Checkbox changed, so see what controls have to be enabled/disabled
                     updateButtons();
                 }
             });
@@ -189,32 +207,39 @@ public class ScoreboardXSLPane extends JPanePlugin {
             // Create the scroll pane now
             xslListPane = new JScrollPane(table);
             loadFiles(currentFolder);
-
+            updateButtons();
         }
         return xslListPane;
     }
 
     /**
-     * Called when a checkbox is changed.  Update which buttons are active based
-     * on what has changed.
-     * TODO: This is called before the selection changes!! so it's all wrong.
+     * Called when a checkbox is clicked.  Update which buttons are active based
+     * on what has changed.  This is WAY overly user-friendly for what we're doing here.
      */
     private void updateButtons() {
-        System.err.println("TM Update");
-//        String [] saveXslFiles = currentXslFiles;
-//        getCurrentXslFiles();
-//        boolean bChange = !StringUtilities.stringArraySame(saveXslFiles, currentXslFiles);
-//        getRevertButton().setEnabled(bChange);
-//        getApplyButton().setEnabled(bChange);
-//        // JB TODO - this is not right because if the list is really empty (nothing checked), we
-//        // have to deal with that - currently no way in current model to that.
-//        if(currentXslFiles == null) {
-//            getSelectAllButton().setEnabled(true);
-//            getDeselectAllButton().setEnabled(false);
-//        } else {
-//            getSelectAllButton().setEnabled(true);
-//            getDeselectAllButton().setEnabled(true);
-//        }
+
+        // Really, this shouldn't be null
+        if(modelXslFiles == null) {
+            return;
+        }
+
+        // Get current selections into modelXslFiles
+        String [] selectedXslFilenames = getSelectedFileNames();
+        boolean bChange = !StringUtilities.stringArraySameUnordered(selectedXslFilenames, modelXslFiles);
+        // Apply and Revert buttons are only enabled if the user selected different filenames than the model has.
+        getRevertButton().setEnabled(bChange);
+        getApplyButton().setEnabled(bChange);
+
+        boolean selectAll = true;
+        boolean deselectAll = true;
+        // If everything is selected, then enable deselect all button, and disable select all
+        if(selectedXslFilenames.length == tableModel.getRowCount()) {
+            selectAll = false;
+        } else if(selectedXslFilenames.length == 0) {
+            deselectAll = false;
+        }
+        getSelectAllButton().setEnabled(selectAll);
+        getDeselectAllButton().setEnabled(deselectAll);
     }
 
     /**
@@ -225,27 +250,32 @@ public class ScoreboardXSLPane extends JPanePlugin {
     private JButton getApplyButton() {
         if (applyButton == null) {
             applyButton = new JButton("Apply");
-            applyButton.addActionListener(e -> {
-                stopEditing();
-                applyXslChoices();
-                });
+            applyButton.addActionListener(e -> { stopEditing(); applyXslChoices(); });
             applyButton.setToolTipText("Apply the selected XSL files for scoreboard HTML generation.");
         }
         return applyButton;
     }
 
+    // Update model's list of desired xsl files to generate HTML scoreboards for.
     protected void applyXslChoices() {
-        String [] saveXslFiles = currentXslFiles;
 
-        getSelectedFiles();
+        // Really, this shouldn't be null at this point
+        if(modelXslFiles == null) {
+            return;
+        }
 
-        if(!StringUtilities.stringArraySame(saveXslFiles, currentXslFiles)) {
+        // Get current selection choices from table model
+        String [] selectedXslFilenames = getSelectedFileNames();
+        // If the selections are different than the model has, we have to apply the new settings
+        if(!StringUtilities.stringArraySameUnordered(selectedXslFilenames, modelXslFiles)){
             ContestInformation ci = getContest().getContestInformation();
-            ci.setScoreboardXSLFiles(currentXslFiles);
-            if(currentXslFiles != null) {
-                currentXslFiles = currentXslFiles.clone();
-            }
-            // save ContesInformation to model
+            ci.setScoreboardXSLFiles(selectedXslFilenames);
+            // Since setScoreboardXSLFiles just assumes ownership of the array we passed, we want our own copy
+            // The String [] is the important thing to clone, not the individual String objects since they're
+            // immutable anyway.
+            modelXslFiles = selectedXslFilenames.clone();
+            updateButtons();
+            // save ContestInformation to model
             getController().updateContestInformation(ci);
         }
     }
@@ -264,10 +294,14 @@ public class ScoreboardXSLPane extends JPanePlugin {
         return revertButton;
     }
 
+    /**
+     * Repopulate table model with original xsl file names from the contest.
+     */
     protected void revertXslChoices() {
         stopEditing();
-        getCurrentXslFiles();
+        getCurrentXslFilesFromModel();
         loadFiles(currentFolder);
+        updateButtons();
     }
 
     /**
@@ -278,7 +312,7 @@ public class ScoreboardXSLPane extends JPanePlugin {
     private JButton getSelectAllButton() {
         if (selectAllButton == null) {
             selectAllButton = new JButton("Select All");
-            selectAllButton.addActionListener(e -> { stopEditing(); tableModel.setAllSelected(true); });
+            selectAllButton.addActionListener(e -> { stopEditing(); tableModel.setAllSelected(true); updateButtons();});
             selectAllButton.setToolTipText("Select all XSL files.");
         }
         return selectAllButton;
@@ -292,7 +326,7 @@ public class ScoreboardXSLPane extends JPanePlugin {
     private JButton getDeselectAllButton() {
         if (deselectAllButton == null) {
             deselectAllButton = new JButton("Deselect All");
-            deselectAllButton.addActionListener(e -> { stopEditing(); tableModel.setAllSelected(false); });
+            deselectAllButton.addActionListener(e -> { stopEditing(); tableModel.setAllSelected(false); updateButtons();});
             deselectAllButton.setToolTipText("Deselect all XSL files.");
         }
         return deselectAllButton;
@@ -308,28 +342,44 @@ public class ScoreboardXSLPane extends JPanePlugin {
             refreshButton = new JButton("Refresh");
             refreshButton.addActionListener(e -> {
                 stopEditing();
-                getSelectedFiles();
+                // To refresh, we have to save the current selections, save the
+                // xsl file list we got for the contest model, temporarily set the modelXslFiles to the selected files and
+                // reload the folder's files, then set the model's files back.  The table model sets
+                // selections based on the filenames in modelXslFiles, which we why we have to jump through
+                // all these hoops.
+
+                // Save model's original file list
+                String [] savedModelXslFiles = modelXslFiles;
+                // Temporarily set modelXslFiles to currently selected filenames
+                modelXslFiles = getSelectedFileNames();
                 loadFiles(currentFolder);
+                // Restore model's xsl filename list
+                modelXslFiles = savedModelXslFiles;
+                updateButtons();
             });
             refreshButton.setToolTipText("Refresh file list in case something was added or deleted.");
         }
         return refreshButton;
     }
 
-    private void getSelectedFiles() {
+    /**
+     * Create a list of the currently selected xsl files names from the table model.
+     *
+     * @return String array of selected file names
+     */
+    private String [] getSelectedFileNames() {
         List<File> selected = tableModel.getSelectedFiles();
         List<String> selectedFiles = new ArrayList<>();
 
         for (File f : selected) {
             selectedFiles.add(f.getName());
         }
-        if (selected.isEmpty()) {
-            currentXslFiles = null;
-        } else {
-            currentXslFiles = selectedFiles.stream().toArray(String[]::new);
-        }
+        return(selectedFiles.stream().toArray(String[]::new));
     }
 
+    /**
+     * Show which files are selected.  This is for debugging and is not currently used.
+     */
     private void printSelected() {
         List<File> selected = tableModel.getSelectedFiles();
         StringBuilder sb = new StringBuilder("Selected files:\n");
@@ -390,6 +440,11 @@ public class ScoreboardXSLPane extends JPanePlugin {
 
     }
 
+    /**
+     * Read the files in the "folder" passed in and populate the table model with the list.
+     *
+     * @param folder
+     */
     private void loadFiles(File folder) {
 
         if (folder == null || !folder.exists() || !folder.isDirectory()) {
@@ -415,10 +470,12 @@ public class ScoreboardXSLPane extends JPanePlugin {
 
         Arrays.sort(files, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
 
-        tableModel.setFiles(Arrays.asList(files), currentXslFiles);
+        tableModel.setFiles(Arrays.asList(files), modelXslFiles);
     }
 
-    /** One row of data: the underlying file plus its current checked state. */
+    /**
+     *  One row of table data: the underlying file plus its current checked state.
+     */
     private static class FileRow {
         final File file;
         boolean selected;
@@ -431,11 +488,12 @@ public class ScoreboardXSLPane extends JPanePlugin {
     /**
      * Table model with two columns:
      *   Column 0 ("File")        -> a FileRow, rendered/edited as a checkbox + filename
-     *   Column 1 ("Description") -> a plain description string (size, folder/file, modified date)
+     *   Column 1 ("Description") -> a plain description string (read from the xsl file's Description comment)
      */
     private static class FileTableModel extends javax.swing.table.AbstractTableModel {
         private final List<FileRow> rows = new ArrayList<>();
         private static final String[] COLUMNS = {"File", "Description"};
+        // Pattern to match a line looking like: <!-- Description: Text of the description -->
         private Pattern descPattern = Pattern.compile("^<!--.+(?i:Description):\\s+(.+)\\s+-->$");
         private static final int LINES_TO_CHECK_FOR_DESCRIPTION = 5;
 
@@ -476,6 +534,12 @@ public class ScoreboardXSLPane extends JPanePlugin {
             return columnIndex == 0;
         }
 
+        /**
+         * Populate the rows and cause the visual component to update
+         *
+         * @param files
+         * @param currentXslFiles
+         */
         void setFiles(List<File> files, String [] currentXslFiles) {
             rows.clear();
             String fname;
@@ -511,6 +575,20 @@ public class ScoreboardXSLPane extends JPanePlugin {
                 if (row.selected) {
                     result.add(row.file);
                 }
+            }
+            return result;
+        }
+
+        /**
+         * Fetch all file names in the xsl folder
+         *
+         * @return String array of filenames.
+         */
+        String [] getAllFileNames() {
+            String [] result = new String[rows.size()];
+            int fileIndex = 0;
+            for (FileRow row : rows) {
+                result[fileIndex++] = row.file.getName();
             }
             return result;
         }
@@ -591,6 +669,7 @@ public class ScoreboardXSLPane extends JPanePlugin {
         }
     }
 
+    // Updates the selections if someone else changes the scoreboard xsl file list
     class ContestInformationListenerImplementation implements IContestInformationListener {
 
         @Override
@@ -623,14 +702,15 @@ public class ScoreboardXSLPane extends JPanePlugin {
          * Check if we need to update the list of selected XSL files due to a settings change
          */
         void checkXslFilesChanged(ContestInformation ci) {
-            String [] newXslFiles = ci.getScoreboardXSLFiles();
-            if(!StringUtilities.stringArraySame(newXslFiles, currentXslFiles)) {
-                currentXslFiles = newXslFiles.clone();
+            String [] curXslFiles = modelXslFiles;
+            getCurrentXslFilesFromModel();
+            if(!StringUtilities.stringArraySame(curXslFiles, modelXslFiles)) {
                 stopEditing();
                 loadFiles(currentFolder);
+                updateButtons();
             }
         }
     }
 
 
-} // @jve:decl-index=0:visual-constraint="10,10"
+}
