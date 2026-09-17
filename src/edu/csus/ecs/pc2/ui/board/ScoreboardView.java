@@ -41,6 +41,7 @@ import edu.csus.ecs.pc2.ui.NSAStandingsPane;
 import edu.csus.ecs.pc2.ui.OptionsPane;
 import edu.csus.ecs.pc2.ui.PacketMonitorPane;
 import edu.csus.ecs.pc2.ui.PluginLoadPane;
+import edu.csus.ecs.pc2.ui.ScoreboardXSLPane;
 import edu.csus.ecs.pc2.ui.StandingsTablePane;
 import edu.csus.ecs.pc2.ui.UIPlugin;
 
@@ -214,6 +215,8 @@ public class ScoreboardView extends JFrame implements UIPlugin {
                 addUIPlugin(getMainTabbedPane(), "Balloon Test", balloonHandler);
                 OptionsPane optionsPanel = new OptionsPane();
                 addUIPlugin(getMainTabbedPane(), "Options", optionsPanel);
+                ScoreboardXSLPane xslPane = new ScoreboardXSLPane();
+                addUIPlugin(getMainTabbedPane(), "Scoreboard XSL", xslPane);
 
                 if (Utilities.isDebugMode()) {
 

@@ -41,10 +41,14 @@ import edu.csus.ecs.pc2.core.IInternalController;
 import edu.csus.ecs.pc2.core.StringUtilities;
 import edu.csus.ecs.pc2.core.XMLUtilities;
 import edu.csus.ecs.pc2.core.log.Log;
+import edu.csus.ecs.pc2.core.model.Account;
+import edu.csus.ecs.pc2.core.model.AccountEvent;
 import edu.csus.ecs.pc2.core.model.ContestInformation;
 import edu.csus.ecs.pc2.core.model.ContestInformationEvent;
+import edu.csus.ecs.pc2.core.model.IAccountListener;
 import edu.csus.ecs.pc2.core.model.IContestInformationListener;
 import edu.csus.ecs.pc2.core.model.IInternalContest;
+import edu.csus.ecs.pc2.core.security.Permission;
 
 /**
  * View and select Scoreboard XSL pane.
@@ -120,10 +124,12 @@ public class ScoreboardXSLPane extends JPanePlugin {
         super.setContestAndController(inContest, inController);
 
         log = getController().getLog();
+        tableModel.setHasPermission(getContest().isAllowed(Permission.Type.ADD_SETTINGS));
         getCurrentXslFilesFromModel();
         loadFiles(currentFolder);
         updateButtons();
         getContest().addContestInformationListener(new ContestInformationListenerImplementation());
+        getContest().addAccountListener(new AccountListenerImplementation());
     }
 
     /**
@@ -223,15 +229,17 @@ public class ScoreboardXSLPane extends JPanePlugin {
             return;
         }
 
+        boolean hasPermission = isAllowed(Permission.Type.ADD_SETTINGS);
+
         // Get current selections into modelXslFiles
         String [] selectedXslFilenames = getSelectedFileNames();
         boolean bChange = !StringUtilities.stringArraySameUnordered(selectedXslFilenames, modelXslFiles);
         // Apply and Revert buttons are only enabled if the user selected different filenames than the model has.
-        getRevertButton().setEnabled(bChange);
-        getApplyButton().setEnabled(bChange);
+        getRevertButton().setEnabled(bChange && hasPermission);
+        getApplyButton().setEnabled(bChange && hasPermission);
 
-        boolean selectAll = true;
-        boolean deselectAll = true;
+        boolean selectAll = true && hasPermission;
+        boolean deselectAll = true && hasPermission;
         // If everything is selected, then enable deselect all button, and disable select all
         if(selectedXslFilenames.length == tableModel.getRowCount()) {
             selectAll = false;
@@ -496,6 +504,15 @@ public class ScoreboardXSLPane extends JPanePlugin {
         // Pattern to match a line looking like: <!-- Description: Text of the description -->
         private Pattern descPattern = Pattern.compile("^<!--.+(?i:Description):\\s+(.+)\\s+-->$");
         private static final int LINES_TO_CHECK_FOR_DESCRIPTION = 5;
+        private boolean hasPermission = false;
+
+        public boolean isHasPermission() {
+            return hasPermission;
+        }
+
+        public void setHasPermission(boolean hasPermission) {
+            this.hasPermission = hasPermission;
+        }
 
         @Override
         public int getRowCount() {
@@ -531,7 +548,7 @@ public class ScoreboardXSLPane extends JPanePlugin {
 
         @Override
         public boolean isCellEditable(int rowIndex, int columnIndex) {
-            return columnIndex == 0;
+            return columnIndex == 0 && isHasPermission();
         }
 
         /**
@@ -713,4 +730,80 @@ public class ScoreboardXSLPane extends JPanePlugin {
     }
 
 
+    /**
+     * Account Listener Implementation.
+     * For permission changes.
+     *
+     */
+    public class AccountListenerImplementation implements IAccountListener {
+
+        @Override
+        public void accountAdded(AccountEvent accountEvent) {
+            // ignored
+        }
+
+        @Override
+        public void accountModified(AccountEvent accountEvent) {
+            // check if is this account
+            Account account = accountEvent.getAccount();
+            /**
+             * If this is the account then update the GUI display per the potential change in Permissions.
+             */
+            if (getContest().getClientId().equals(account.getClientId())) {
+                // They modified us!!
+                if(tableModel != null) {
+                    tableModel.setHasPermission(getContest().isAllowed(Permission.Type.ADD_SETTINGS));
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            updateButtons();
+                        }
+                    });
+                }
+
+            }
+        }
+
+        @Override
+        public void accountsAdded(AccountEvent accountEvent) {
+            // ignore
+        }
+
+        @Override
+        public void accountsModified(AccountEvent accountEvent) {
+            Account[] accounts = accountEvent.getAccounts();
+            for (Account account : accounts) {
+
+                /**
+                 * If this is the account then update the GUI display per the potential change in Permissions.
+                 */
+                if (getContest().getClientId().equals(account.getClientId())) {
+                    // They modified us!!
+                    if(tableModel != null) {
+                        tableModel.setHasPermission(getContest().isAllowed(Permission.Type.ADD_SETTINGS));
+                        SwingUtilities.invokeLater(new Runnable() {
+                            @Override
+                            public void run() {
+                                updateButtons();
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void accountsRefreshAll(AccountEvent accountEvent) {
+            // They modified us!!
+            if(tableModel != null) {
+                tableModel.setHasPermission(getContest().isAllowed(Permission.Type.ADD_SETTINGS));
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateButtons();
+                    }
+                });
+            }
+        }
+    }
 }
