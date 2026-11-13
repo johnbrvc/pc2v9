@@ -25,7 +25,7 @@ public class DivisionScoreboardYamlLoaderTest extends AbstractTestCase {
         InternalContest contest = createContestWithGroups();
 
         File overlayFile = new File(getTestDataDirectory(), "system.pc2.yaml");
-        Map<String, Object> content = new ContestSnakeYAMLLoader().loadYaml(overlayFile.getAbsolutePath());
+        Map<String, Object> content = ContestImportUtilities.loadYaml(overlayFile.getAbsolutePath());
         loader.applyOverlay(contest, content, overlayFile.getAbsolutePath());
 
         Group d1 = findGroupByName(contest, "D1");
@@ -54,7 +54,7 @@ public class DivisionScoreboardYamlLoaderTest extends AbstractTestCase {
         InternalContest contest = createContestWithGroups();
 
         File overlayFile = new File(getTestDataDirectory(), "unknown-group.yaml");
-        Map<String, Object> content = new ContestSnakeYAMLLoader().loadYaml(overlayFile.getAbsolutePath());
+        Map<String, Object> content = ContestImportUtilities.loadYaml(overlayFile.getAbsolutePath());
         loader.applyOverlay(contest, content, overlayFile.getAbsolutePath());
 
         Group d1 = findGroupByName(contest, "D1");

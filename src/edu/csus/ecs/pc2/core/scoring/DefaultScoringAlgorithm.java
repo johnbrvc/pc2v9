@@ -16,8 +16,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.Vector;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import edu.csus.ecs.pc2.VersionInfo;
 import edu.csus.ecs.pc2.core.PermissionGroup;
@@ -46,6 +44,7 @@ import edu.csus.ecs.pc2.core.model.Site;
 import edu.csus.ecs.pc2.core.security.Permission;
 import edu.csus.ecs.pc2.core.security.Permission.Type;
 import edu.csus.ecs.pc2.core.security.PermissionList;
+import edu.csus.ecs.pc2.core.standings.ScoreboardGroupUtilities;
 import edu.csus.ecs.pc2.core.standings.ScoreboardUtilities;
 import edu.csus.ecs.pc2.core.util.IMemento;
 import edu.csus.ecs.pc2.core.util.RunStatistics;
@@ -480,6 +479,9 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
 
         Site[] sites = theContest.getSites();
         summaryMemento.putInteger("siteCount", sites.length);
+        
+        // Whether WTI/XSL should offer an "All teams" scoreboard (AUTO/TRUE/FALSE policy)
+        summaryMemento.putBoolean("showAllTeams", ScoreboardGroupUtilities.shouldShowAllTeams(theContest));
 
         Group[] groups = theContest.getGroups();
         boolean bGroupsExcluded = false;
@@ -675,6 +677,14 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
      * indicating we excluded some groups.   This information is used by the teamStandings memento generator
      * so it will not include medal / citation information in the teamStanding memento.
      *
+     * <p>
+     * Attribute {@code id} is the <em>scoreboard group-list ordinal</em>: 1-based among
+     * groups with {@link Group#isDisplayOnScoreboard()} true, in contest order.
+     * It is not {@link Group#getGroupId()} (External Id; emitted as {@code externalId})
+     * and not the Admin Groups tab "Id" column.
+     * Attribute {@code divisionWide} reflects {@link Group#isDivisionWideScoreboard()}.
+     * </p>
+     *
      * @param groups All groups configured
      * @param memento Where to put the group XML informtion
      * @param wantedGroups - specific groups the scoreboard is being generated for
@@ -684,14 +694,14 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
     private boolean dumpGroupList(Group[] groups, IMemento memento, List<Group> wantedGroups, AccountList accountList) {
         memento.putInteger("groupCount", groups.length+1);
         IMemento groupsMemento = memento.createChild("groupList");
-        int id = 0;
+        int ordinal = 0;
         int teamCount;
         boolean excludedGroups = false;
         for (int i = 0; i < groups.length; i++) {
             if (!groups[i].isDisplayOnScoreboard()) {
                 continue;
             }
-            id = id + 1;
+            ordinal = ordinal + 1;
             // Count number of scoreboard displayed teams in this group
             teamCount = 0;
             for (Account account : accountList.getList()) {
@@ -702,9 +712,12 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
                 }
             }
             IMemento groupMemento = groupsMemento.createChild("group");
-            groupMemento.putInteger("id", id);
+            // Scoreboard group-list ordinal (standings group/@id for classic XSL/HTML).
+            // WTI filters by externalId (group/@externalId), not this ordinal.
+            groupMemento.putInteger("id", ordinal);
             groupMemento.putString("title", groups[i].getDisplayName());
             groupMemento.putInteger("externalId", groups[i].getGroupId());
+            groupMemento.putBoolean("divisionWide", groups[i].isDivisionWideScoreboard());
             if (groups[i].getSite() != null) {
                 groupMemento.putInteger("pc2Site", groups[i].getSite().getSiteNumber());
             }
@@ -748,32 +761,6 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
             groupIndexHash.put(group, Integer.valueOf(groupCount));
             groupCount++;
         }
-        Hashtable<Group, Integer> divisionIndexHash = new Hashtable<Group, Integer>();
-        int divisionCount = 0;
-        // TODO this bit should in the future can probably go away when divisions are supported better.
-        // TODO REFACTOR I689 redesign how divisions are identified
-        int highestFound = 0;
-        for (Group group : groups) {
-            // no reference to groups that should not be displayed on scoreboard
-            if (!group.isDisplayOnScoreboard()) {
-                continue;
-            }
-            Pattern pattern = Pattern.compile("D\\d+$");
-            Matcher matcher = pattern.matcher(group.getDisplayName());
-            if (matcher.find()) {
-                // we found pattern in the group name
-                // the group include the D to take the substring
-                Integer found = Integer.parseInt(matcher.group(0).substring(1));
-                if (found.intValue() > highestFound) {
-                    // keep track of the highest division number
-                    highestFound = found.intValue();
-                }
-                // store by group, it's division number
-                divisionIndexHash.put(group, found);
-            }
-        }
-        // this is the number used in the array constructors,  bigger is ok, smaller is not.
-        divisionCount = highestFound;
         String teamVarDisplayString = contestInformation.getTeamScoreboardDisplayFormat();
 
         StandingsRecord[] srArray = new StandingsRecord[treeMap.size()];
@@ -814,22 +801,6 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
             groupRank[i] = 0;
             groupIndexRank[i] = 0;
             groupPointScore[i] = 0.0;
-        }
-        long[] divisionNumSolved = new long[divisionCount];
-        for (int i = 0; i < divisionCount; i++) {
-            divisionNumSolved[i] = -1;
-        }
-        int[] divisionRank = new int[divisionCount];
-        int[] divisionIndexRank = new int[divisionCount];
-        long[] divisionScore = new long[divisionCount];
-        double[] divisionPointScore = new double[divisionCount];
-        long[] divisionLastSolved = new long[divisionCount];
-        for (int i = 0; i < divisionCount; i++) {
-            divisionRank[i] = 0;
-            divisionIndexRank[i] = 0;
-            divisionScore[i] = 0;
-            divisionLastSolved[i] = 0;
-            divisionPointScore[i] = 0.0;
         }
 
         RunStatistics runStats = new RunStatistics(theContest);
@@ -925,24 +896,6 @@ public class DefaultScoringAlgorithm implements IScoringAlgorithm {
                 standingsRecordMemento.putInteger("teamGroupId", groupIndex+1);
                 standingsRecordMemento.putInteger("teamGroupExternalId", group.getGroupId());
                 standingsRecordMemento.putInteger("scoringAdjustment", account.getScoringAdjustment());
-                // division stuff
-                if (divisionIndexHash.containsKey(group)) {
-                    int divisionIndex = divisionIndexHash.get(group).intValue()-1;
-                    divisionIndexRank[divisionIndex]++;
-                    if (!isTeamTied(standingsRecord, isPointScoring, divisionPointScore[divisionIndex], divisionNumSolved[divisionIndex], divisionScore[divisionIndex],divisionLastSolved[divisionIndex])) {
-                        divisionNumSolved[divisionIndex] = standingsRecord.getNumberSolved();
-                        divisionScore[divisionIndex] = standingsRecord.getPenaltyPoints();
-                        divisionPointScore[divisionIndex] = standingsRecord.getScore();
-                        divisionLastSolved[divisionIndex] = standingsRecord.getLastSolved();
-                        divisionRank[divisionIndex] = divisionIndexRank[divisionIndex];
-                        standingsRecord.setDivisionRankNumber(divisionRank[divisionIndex]);
-                    } else {
-                        // current user tied with last user, so same rank
-                        standingsRecord.setDivisionRankNumber(divisionRank[divisionIndex]);
-                    }
-
-                    standingsRecordMemento.putInteger("divisionRank", standingsRecord.getDivisionRankNumber());
-                }
             }
 
             SummaryRow summaryRow = standingsRecord.getSummaryRow();
